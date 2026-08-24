@@ -4,14 +4,14 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Figtree:wght@400;500;600;700&display=swap">
 <style>
   :root {
-    --page: #f9f9f7;
-    --surface: #fcfcfb;
-    --ink: #0b0b0b;
-    --ink-2: #52514e;
-    --muted: #898781;
-    --grid: #e1e0d9;
-    --baseline: #c3c2b7;
-    --border: rgba(11,11,11,0.10);
+    --page: #eef2f8;
+    --surface: #ffffff;
+    --ink: #101319;
+    --ink-2: #4c5563;
+    --muted: #8a92a1;
+    --grid: #e4e8ef;
+    --baseline: #c4cbd7;
+    --border: rgba(23,43,77,0.10);
     --accent: #2a78d6;
     --accent-soft: rgba(42,120,214,0.10);
     --cost: #eb6834;
@@ -22,51 +22,117 @@
     --good-bg: rgba(12,163,12,0.10);
     --warn-bg: rgba(250,178,25,0.14);
     --bad-bg: rgba(208,59,59,0.10);
-    --overlay: rgba(11,11,11,0.45);
+    --overlay: rgba(16,19,25,0.45);
+    --tint-blue: #e9f1fc;
+    --tint-orange: #fdeee4;
+    --tint-green: #e6f5eb;
+    --tint-violet: #eeecfa;
+    --tint-aqua: #e2f4ee;
+    --tint-yellow: #fbf3da;
+    --tint-pink: #fbeaf2;
+    --tint-grey: #eef0f4;
+    --tint-red: rgba(208,59,59,0.08);
+    --acc-blue: #2a78d6;
+    --acc-orange: #eb6834;
+    --acc-green: #2e9e5b;
+    --acc-violet: #6c5bd2;
+    --acc-aqua: #1baf7a;
+    --acc-yellow: #eda100;
+    --acc-pink: #e87ba4;
+    --lab-blue: #1c5cab;
+    --lab-orange: #b03f14;
+    --lab-green: #0b6b2f;
+    --lab-violet: #5747b8;
+    --lab-aqua: #0e7a54;
+    --lab-yellow: #8a5f00;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
-      --page: #0d0d0d;
-      --surface: #1a1a19;
-      --ink: #ffffff;
-      --ink-2: #c3c2b7;
-      --muted: #898781;
-      --grid: #2c2c2a;
-      --baseline: #383835;
+      --page: #0e1013;
+      --surface: #181c22;
+      --ink: #f2f4f8;
+      --ink-2: #c0c7d2;
+      --muted: #8a92a1;
+      --grid: #262b33;
+      --baseline: #39404b;
       --border: rgba(255,255,255,0.10);
       --accent: #3987e5;
       --accent-soft: rgba(57,135,229,0.16);
       --cost: #d95926;
       --good: #0ca30c;
-      --good-text: #0ca30c;
+      --good-text: #3fbf63;
       --warn: #fab219;
       --bad: #e66767;
       --good-bg: rgba(12,163,12,0.16);
       --warn-bg: rgba(250,178,25,0.16);
       --bad-bg: rgba(208,59,59,0.18);
       --overlay: rgba(0,0,0,0.6);
+      --tint-blue: rgba(57,135,229,0.13);
+      --tint-orange: rgba(235,104,52,0.13);
+      --tint-green: rgba(46,158,91,0.13);
+      --tint-violet: rgba(144,133,233,0.14);
+      --tint-aqua: rgba(27,175,122,0.13);
+      --tint-yellow: rgba(237,161,0,0.12);
+      --tint-pink: rgba(213,81,129,0.14);
+      --tint-grey: rgba(255,255,255,0.05);
+      --tint-red: rgba(230,103,103,0.13);
+      --acc-blue: #3987e5;
+      --acc-orange: #d95926;
+      --acc-green: #2e9e5b;
+      --acc-violet: #9085e9;
+      --acc-aqua: #199e70;
+      --acc-yellow: #c98500;
+      --acc-pink: #d55181;
+      --lab-blue: #6da7ec;
+      --lab-orange: #f0895f;
+      --lab-green: #57c07c;
+      --lab-violet: #a99ff0;
+      --lab-aqua: #3db98a;
+      --lab-yellow: #e0a63c;
     }
   }
   :root[data-theme="dark"] {
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --baseline: #383835;
+    --page: #0e1013;
+    --surface: #181c22;
+    --ink: #f2f4f8;
+    --ink-2: #c0c7d2;
+    --muted: #8a92a1;
+    --grid: #262b33;
+    --baseline: #39404b;
     --border: rgba(255,255,255,0.10);
     --accent: #3987e5;
     --accent-soft: rgba(57,135,229,0.16);
     --cost: #d95926;
     --good: #0ca30c;
-    --good-text: #0ca30c;
+    --good-text: #3fbf63;
     --warn: #fab219;
     --bad: #e66767;
     --good-bg: rgba(12,163,12,0.16);
     --warn-bg: rgba(250,178,25,0.16);
     --bad-bg: rgba(208,59,59,0.18);
     --overlay: rgba(0,0,0,0.6);
+    --tint-blue: rgba(57,135,229,0.13);
+    --tint-orange: rgba(235,104,52,0.13);
+    --tint-green: rgba(46,158,91,0.13);
+    --tint-violet: rgba(144,133,233,0.14);
+    --tint-aqua: rgba(27,175,122,0.13);
+    --tint-yellow: rgba(237,161,0,0.12);
+    --tint-pink: rgba(213,81,129,0.14);
+    --tint-grey: rgba(255,255,255,0.05);
+    --tint-red: rgba(230,103,103,0.13);
+    --acc-blue: #3987e5;
+    --acc-orange: #d95926;
+    --acc-green: #2e9e5b;
+    --acc-violet: #9085e9;
+    --acc-aqua: #199e70;
+    --acc-yellow: #c98500;
+    --acc-pink: #d55181;
+    --lab-blue: #6da7ec;
+    --lab-orange: #f0895f;
+    --lab-green: #57c07c;
+    --lab-violet: #a99ff0;
+    --lab-aqua: #3db98a;
+    --lab-yellow: #e0a63c;
   }
   * { box-sizing: border-box; }
   body {
@@ -103,8 +169,8 @@
 
   /* ---------- dropzone / empty state ---------- */
   .dropzone {
-    border: 1.5px dashed var(--baseline); border-radius: 14px;
-    background: var(--surface); padding: 44px 24px; text-align: center;
+    border: 1.5px dashed var(--acc-blue); border-radius: 14px;
+    background: var(--tint-blue); padding: 44px 24px; text-align: center;
     transition: border-color .15s, background .15s; margin-bottom: 16px;
   }
   .dropzone.dragover { border-color: var(--accent); background: var(--accent-soft); }
@@ -122,6 +188,39 @@
   }
   .chip:hover { background: var(--accent-soft); }
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+
+  /* ---------- palet lembut per section ---------- */
+  .brand h1::before {
+    content: ""; display: inline-block; width: 13px; height: 13px; border-radius: 4px;
+    background: linear-gradient(135deg, var(--acc-blue), var(--acc-aqua));
+    margin-right: 9px;
+  }
+  .kpi.k-blue   { background: var(--tint-blue); }   .kpi.k-blue .k-label   { color: var(--lab-blue); }
+  .kpi.k-orange { background: var(--tint-orange); } .kpi.k-orange .k-label { color: var(--lab-orange); }
+  .kpi.k-green  { background: var(--tint-green); }  .kpi.k-green .k-label  { color: var(--lab-green); }
+  .kpi.k-violet { background: var(--tint-violet); } .kpi.k-violet .k-label { color: var(--lab-violet); }
+  .kpi.k-aqua   { background: var(--tint-aqua); }   .kpi.k-aqua .k-label   { color: var(--lab-aqua); }
+  .kpi.k-yellow { background: var(--tint-yellow); } .kpi.k-yellow .k-label { color: var(--lab-yellow); }
+  .kpi.k-red    { background: var(--tint-red); }    .kpi.k-red .k-label    { color: var(--bad); }
+  .kpi-hero.k-orange .k-value { color: var(--lab-orange); }
+  .card-blue   { --ca: var(--acc-blue);   --ct: var(--tint-blue); }
+  .card-aqua   { --ca: var(--acc-aqua);   --ct: var(--tint-aqua); }
+  .card-green  { --ca: var(--acc-green);  --ct: var(--tint-green); }
+  .card-yellow { --ca: var(--acc-yellow); --ct: var(--tint-yellow); }
+  .card-violet { --ca: var(--acc-violet); --ct: var(--tint-violet); }
+  .card-pink   { --ca: var(--acc-pink);   --ct: var(--tint-pink); }
+  .card-orange { --ca: var(--acc-orange); --ct: var(--tint-orange); }
+  .card[class*="card-"] { border-top: 3px solid var(--ca); }
+  .card-yellow pre.report { background: var(--tint-yellow); border-color: transparent; }
+  .card h3[data-ic]::before {
+    content: attr(data-ic);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 8px;
+    background: var(--ct, var(--tint-grey));
+    font-size: 14px; margin-right: 9px; vertical-align: -8px;
+  }
+  .tab.active { background: var(--tint-blue); border-radius: 8px 8px 0 0; }
+  .gate-card { border-top: 4px solid var(--acc-blue); }
 
   /* ---------- login gate & akun ---------- */
   .gate {
@@ -385,10 +484,10 @@
     <div id="pageSummary">
     <div class="kpis" id="kpis"></div>
 
-    <div class="card">
+    <div class="card card-blue">
       <div class="report-head" style="margin-bottom:2px">
         <div>
-          <h3>Revenue vs Biaya Harian</h3>
+          <h3 data-ic="📈">Revenue vs Biaya Harian</h3>
           <p class="c-sub" id="dailySub" style="margin-bottom:8px"></p>
         </div>
         <div style="display:flex; gap:6px; flex-wrap:wrap" id="chartModeRow">
@@ -401,22 +500,22 @@
       <div class="chart-box" id="chartDaily"></div>
     </div>
 
-    <div class="card">
-      <h3>Revenue per varian</h3>
+    <div class="card card-aqua">
+      <h3 data-ic="🧩">Revenue per varian</h3>
       <p class="c-sub">Gross revenue order paid, per varian produk</p>
       <div class="chart-box" id="chartVariant"></div>
     </div>
 
-    <div class="card">
-      <h3>Rekap untung / rugi per minggu</h3>
+    <div class="card card-green">
+      <h3 data-ic="🗓️">Rekap untung / rugi per minggu</h3>
       <p class="c-sub">Minggu Senin–Minggu · biaya iklan = angka Meta + PPN 11% (upload = sebelum PPN) · biaya lain = input manual, tanpa markup PPN · profit = net revenue − (biaya iklan incl. PPN + biaya lain) · ROAS = revenue paid ÷ biaya iklan incl. PPN</p>
       <div class="tbl-scroll" id="weeklyScroll"><table id="weeklyTable"></table></div>
     </div>
 
-    <div class="card">
+    <div class="card card-yellow">
       <div class="report-head">
         <div>
-          <h3>Teks laporan mingguan</h3>
+          <h3 data-ic="📝">Teks laporan mingguan</h3>
           <p class="c-sub" style="margin-bottom:0">Siap salin ke WhatsApp / email tim</p>
         </div>
         <div style="display:flex; gap:8px; align-items:center">
@@ -427,8 +526,8 @@
       <pre class="report" id="reportText"></pre>
     </div>
 
-    <div class="card">
-      <h3>Detail order</h3>
+    <div class="card card-violet">
+      <h3 data-ic="🧾">Detail order</h3>
       <p class="c-sub">Order dalam periode terpilih (berdasarkan tanggal order masuk)</p>
       <div class="search-row">
         <select class="field-sel" id="searchField" aria-label="Kolom pencarian">
@@ -446,10 +545,10 @@
       <div class="muted-note" id="tableNote"></div>
     </div>
 
-    <div class="card">
+    <div class="card card-pink">
       <div class="report-head">
         <div>
-          <h3>Riwayat upload</h3>
+          <h3 data-ic="🕓">Riwayat upload</h3>
           <p class="c-sub" style="margin-bottom:0">Semua file yang pernah diupload ke dashboard ini</p>
         </div>
         <button class="ghost danger" id="btnReset">Hapus semua data</button>
@@ -461,14 +560,14 @@
     <div id="pageAds" hidden>
       <div class="kpis" id="adsKpis"></div>
 
-      <div class="card">
-        <h3>Spend Iklan Harian</h3>
+      <div class="card card-orange">
+        <h3 data-ic="📣">Spend Iklan Harian</h3>
         <p class="c-sub" id="adsDailySub"></p>
         <div class="chart-box" id="chartAdsDaily"></div>
       </div>
 
-      <div class="card">
-        <h3>Performa per Iklan</h3>
+      <div class="card card-orange">
+        <h3 data-ic="🎯">Performa per Iklan</h3>
         <p class="c-sub">Periode terpilih · spend sebelum PPN kecuali kolom "+PPN" · CPM &amp; biaya/hasil dihitung dari spend sebelum PPN · "Hasil" = kolom Results Meta (jenisnya bisa beda antar kampanye: purchase/lead)</p>
         <div class="tbl-scroll" id="adsTableScroll"><table id="adsTable"></table></div>
         <div class="muted-note" id="adsTableNote"></div>
@@ -1250,11 +1349,11 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     var hasCostData = adsRows.length > 0 || costRows.length > 0;
     var k = document.getElementById("kpis");
     k.innerHTML =
-      '<div class="kpi kpi-hero"><div class="k-label">Total Revenue</div><div class="k-value">' + rp(totalRev) + '</div><div class="k-sub">net produk ' + rpCompact(sum.netPaid) + ' · lainnya ' + rpCompact(sum.revManual) + deltaHtml + "</div></div>" +
-      '<div class="kpi"><div class="k-label">Total Biaya</div><div class="k-value">' + (hasCostData ? rpCompact(sum.spend) : "–") + '</div><div class="k-sub">' +
+      '<div class="kpi kpi-hero k-blue"><div class="k-label">Total Revenue</div><div class="k-value">' + rp(totalRev) + '</div><div class="k-sub">net produk ' + rpCompact(sum.netPaid) + ' · lainnya ' + rpCompact(sum.revManual) + deltaHtml + "</div></div>" +
+      '<div class="kpi k-orange"><div class="k-label">Total Biaya</div><div class="k-value">' + (hasCostData ? rpCompact(sum.spend) : "–") + '</div><div class="k-sub">' +
         (hasCostData ? "iklan " + rpCompact(sum.spendAds) + " (incl. PPN 11%) · lainnya " + rpCompact(sum.spendManual) : "belum ada data biaya — upload CSV Meta Ads / biaya manual") + "</div></div>" +
-      '<div class="kpi"><div class="k-label">' + (sum.profit >= 0 ? "Profit" : "Rugi") + '</div><div class="k-value ' + profitCls + '">' + rpCompact(sum.profit) + '</div><div class="k-sub">(net + rev lain) − total biaya' + (roas !== null ? " · ROAS " + roasStr(roas) : "") + "</div></div>" +
-      '<div class="kpi"><div class="k-label">Order Masuk</div><div class="k-value">' + fmtID.format(sum.newOrders) + '</div><div class="k-sub">' + sum.paidOrders + " paid · " + sum.pendingOrders + " pending (" + rpCompact(sum.pendingValue) + ") · " + sum.canceledOrders + " batal · rate " + pct(paidRate) + "</div></div>";
+      '<div class="kpi ' + (sum.profit >= 0 ? "k-green" : "k-red") + '"><div class="k-label">' + (sum.profit >= 0 ? "Profit" : "Rugi") + '</div><div class="k-value ' + profitCls + '">' + rpCompact(sum.profit) + '</div><div class="k-sub">(net + rev lain) − total biaya' + (roas !== null ? " · ROAS " + roasStr(roas) : "") + "</div></div>" +
+      '<div class="kpi k-violet"><div class="k-label">Order Masuk</div><div class="k-value">' + fmtID.format(sum.newOrders) + '</div><div class="k-sub">' + sum.paidOrders + " paid · " + sum.pendingOrders + " pending (" + rpCompact(sum.pendingValue) + ") · " + sum.canceledOrders + " batal · rate " + pct(paidRate) + "</div></div>";
   }
 
   /* ---------------- weekly ---------------- */
@@ -1530,10 +1629,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     var cpr = results > 0 ? spendNet / results : null;
 
     document.getElementById("adsKpis").innerHTML =
-      '<div class="kpi kpi-hero"><div class="k-label">Total Spend</div><div class="k-value">' + rp(spendIncl) + '</div><div class="k-sub">incl. PPN 11% · sebelum PPN ' + rpCompact(spendNet) + "</div></div>" +
-      '<div class="kpi"><div class="k-label">Impresi</div><div class="k-value">' + (impr ? fmtID.format(impr) : "–") + '</div><div class="k-sub">total tayang di periode ini</div></div>' +
-      '<div class="kpi"><div class="k-label">CPM</div><div class="k-value">' + (cpm !== null ? rpCompact(cpm) : "–") + '</div><div class="k-sub">biaya per 1.000 impresi (sblm PPN)</div></div>' +
-      '<div class="kpi"><div class="k-label">Hasil</div><div class="k-value">' + (results ? fmtID.format(results) : "–") + '</div><div class="k-sub">' + (cpr !== null ? "biaya per hasil " + rpCompact(cpr) + " (sblm PPN)" : "kolom Results Meta") + "</div></div>";
+      '<div class="kpi kpi-hero k-orange"><div class="k-label">Total Spend</div><div class="k-value">' + rp(spendIncl) + '</div><div class="k-sub">incl. PPN 11% · sebelum PPN ' + rpCompact(spendNet) + "</div></div>" +
+      '<div class="kpi k-blue"><div class="k-label">Impresi</div><div class="k-value">' + (impr ? fmtID.format(impr) : "–") + '</div><div class="k-sub">total tayang di periode ini</div></div>' +
+      '<div class="kpi k-yellow"><div class="k-label">CPM</div><div class="k-value">' + (cpm !== null ? rpCompact(cpm) : "–") + '</div><div class="k-sub">biaya per 1.000 impresi (sblm PPN)</div></div>' +
+      '<div class="kpi k-aqua"><div class="k-label">Hasil</div><div class="k-value">' + (results ? fmtID.format(results) : "–") + '</div><div class="k-sub">' + (cpr !== null ? "biaya per hasil " + rpCompact(cpr) + " (sblm PPN)" : "kolom Results Meta") + "</div></div>";
 
     /* grafik spend harian */
     var box = document.getElementById("chartAdsDaily");
