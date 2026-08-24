@@ -123,6 +123,20 @@
   .chip:hover { background: var(--accent-soft); }
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 
+  /* ---------- sticky header & back-to-top ---------- */
+  .sticky-head { position: sticky; top: 0; z-index: 45; background: var(--page); padding-top: 8px; margin-top: -8px; }
+  .sticky-head.stuck { border-bottom: 1px solid var(--grid); box-shadow: 0 6px 16px rgba(0,0,0,.07); }
+  .sticky-head .tabs { margin-bottom: 0; border-bottom: none; }
+  #app { padding-top: 16px; border-top: 1px solid var(--grid); }
+  .totop {
+    position: fixed; right: 22px; bottom: 22px; z-index: 55;
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    background: var(--accent); color: #fff; font-size: 20px; line-height: 1; cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  }
+  .totop:hover { filter: brightness(1.1); }
+  .totop:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
   /* ---------- tabs ---------- */
   .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin-bottom: 16px; }
   .tab {
@@ -283,6 +297,7 @@
 </style>
 
 <div class="wrap">
+  <div class="sticky-head" id="stickyHead">
   <div class="topbar">
     <div class="brand">
       <h1>Ruang Peta Revenue</h1>
@@ -295,20 +310,7 @@
     </div>
   </div>
 
-  <div class="dropzone" id="dropzone">
-    <h2>Tarik &amp; letakkan file CSV di sini</h2>
-    <p>Bisa dua jenis file sekaligus — dashboard mengenali otomatis. Data diproses sepenuhnya di browser dan <b>bertambah</b> setiap upload (tidak menimpa data lama).</p>
-    <button class="ghost" id="btnUpload2">Pilih file…</button>
-    <div class="dz-steps">
-      <b>1 · Data penjualan</b> — Scalev → Order → Export → <b>Order with Product (CSV)</b>.<br>
-      <b>2 · Biaya iklan</b> — Meta Ads Manager → Reports → Export dengan breakdown <b>per hari</b> (mis. <i>…(time-daily).csv</i>, ada kolom “Amount spent”). Angka Meta dianggap <b>belum termasuk PPN</b>; dashboard menambahkan PPN 11% otomatis.<br>
-      <b>3 · Biaya lain (manual)</b> — CSV sederhana: <code>tgl,deskripsi,nilai</code> (opsional kolom ke-4: <code>kategori</code>). Contoh: <code>15/08/2026,Langganan tools,150000,tools</code>. Nilai dianggap final (tidak ditambah PPN).<br>
-      <b>4 · Revenue lain (manual)</b> — format sama (<code>tgl,deskripsi,nilai</code>), untuk komisi tiket dan pendapatan di luar produk. Beri kata “revenue” di baris header (mis. <code>tgl,deskripsi,nilai revenue</code>) agar langsung dikenali — kalau tidak, dashboard akan menanyakan file itu biaya atau revenue.<br><br>
-      Jika ada order/baris yang sudah pernah diupload, kamu akan diberi tahu jumlah duplikatnya dan memilih sendiri mau melanjutkan atau tidak.
-    </div>
-  </div>
-
-  <div id="app" hidden>
+  <div id="stickyControls" hidden>
     <div class="filters">
       <span class="lbl">Periode</span>
       <div class="range-wrap" id="rangeWrap">
@@ -327,7 +329,23 @@
       <button class="tab active" data-page="summary">Ringkasan</button>
       <button class="tab" data-page="ads">Laporan Iklan</button>
     </div>
+  </div>
+  </div><!-- /sticky-head -->
 
+  <div class="dropzone" id="dropzone">
+    <h2>Tarik &amp; letakkan file CSV di sini</h2>
+    <p>Bisa dua jenis file sekaligus — dashboard mengenali otomatis. Data diproses sepenuhnya di browser dan <b>bertambah</b> setiap upload (tidak menimpa data lama).</p>
+    <button class="ghost" id="btnUpload2">Pilih file…</button>
+    <div class="dz-steps">
+      <b>1 · Data penjualan</b> — Scalev → Order → Export → <b>Order with Product (CSV)</b>.<br>
+      <b>2 · Biaya iklan</b> — Meta Ads Manager → Reports → Export dengan breakdown <b>per hari</b> (mis. <i>…(time-daily).csv</i>, ada kolom “Amount spent”). Angka Meta dianggap <b>belum termasuk PPN</b>; dashboard menambahkan PPN 11% otomatis.<br>
+      <b>3 · Biaya lain (manual)</b> — CSV sederhana: <code>tgl,deskripsi,nilai</code> (opsional kolom ke-4: <code>kategori</code>). Contoh: <code>15/08/2026,Langganan tools,150000,tools</code>. Nilai dianggap final (tidak ditambah PPN).<br>
+      <b>4 · Revenue lain (manual)</b> — format sama (<code>tgl,deskripsi,nilai</code>), untuk komisi tiket dan pendapatan di luar produk. Beri kata “revenue” di baris header (mis. <code>tgl,deskripsi,nilai revenue</code>) agar langsung dikenali — kalau tidak, dashboard akan menanyakan file itu biaya atau revenue.<br><br>
+      Jika ada order/baris yang sudah pernah diupload, kamu akan diberi tahu jumlah duplikatnya dan memilih sendiri mau melanjutkan atau tidak.
+    </div>
+  </div>
+
+  <div id="app" hidden>
     <div id="pageSummary">
     <div class="kpis" id="kpis"></div>
 
@@ -422,6 +440,7 @@
     </div><!-- /pageAds -->
   </div>
 </div>
+<button class="totop" id="toTop" aria-label="Kembali ke atas" hidden>↑</button>
 <div id="tip"></div>
 
 <script>
@@ -504,7 +523,7 @@
   var PPN = 0.11; // data iklan Meta diupload sebelum PPN; biaya manual dianggap sudah final
   var store = { orders: {}, ads: {}, costs: {}, revs: {}, log: [] };
   var orders = [], adsRows = [], costRows = [], revRows = [], variantNames = [];
-  var state = { start: null, end: null, rangeLabel: "Semua data", search: "", searchField: "all", reportWeek: null, sortKey: "draft", sortDir: -1, chartMode: "both" };
+  var state = { start: null, end: null, rangeLabel: "Semua data", search: "", searchField: "all", reportWeek: null, sortKey: "draft", sortDir: -1, chartMode: "both", adsSortKey: "spend", adsSortDir: -1 };
 
   function saveStore() {
     try { localStorage.setItem(LSK, JSON.stringify(store)); }
@@ -654,7 +673,13 @@
     return out;
   }
 
-  function parseAds(rows) {
+  function accountFromFileName(fileName) {
+    var m = String(fileName || "").match(/^(.*?)[-_ ]Ads[-_ ]/i);
+    return m ? m[1].replace(/[-_]+/g, " ").trim() : "";
+  }
+
+  function parseAds(rows, fileName) {
+    var account = accountFromFileName(fileName);
     var head = rows[0].map(function (h) { return h.trim(); });
     var idx = {};
     head.forEach(function (h, i) { idx[h] = i; });
@@ -663,7 +688,7 @@
     if (!("Amount spent (IDR)" in idx) && !("Amount spent" in idx)) throw new Error("Kolom “Amount spent” tidak ditemukan di file iklan ini.");
     var spentCol = ("Amount spent (IDR)" in idx) ? "Amount spent (IDR)" : "Amount spent";
 
-    var out = [], nonDaily = 0;
+    var out = [], nonDaily = 0, byKey = {};
     for (var r = 1; r < rows.length; r++) {
       var row = rows[r];
       if (!row || row.length < 3) continue;
@@ -671,14 +696,19 @@
       var d = parseIsoDate(start);
       if (!d) continue;
       if (start !== end) { nonDaily++; continue; }
-      out.push({
+      var rec = {
         date: d.getTime(),
         ad: g(row, "Ad name") || "(tanpa nama)",
         adset: g(row, "Ad set name") || "",
+        account: account,
         spent: num(row, spentCol),
         impressions: num(row, "Impressions"),
         results: num(row, "Results")
-      });
+      };
+      // satu iklan bisa muncul >1 baris di hari yang sama (mis. dua kampanye) — jumlahkan, jangan timpa
+      var rk = adKey(rec), exR = byKey[rk];
+      if (exR) { exR.spent += rec.spent; exR.impressions += rec.impressions; exR.results += rec.results; }
+      else { byKey[rk] = rec; out.push(rec); }
     }
     if (!out.length) {
       if (nonDaily > 0) throw new Error("File ini rekap rentang tanggal, bukan harian. Export ulang dari Meta Ads dengan breakdown per hari (file “…(time-daily)”).");
@@ -687,7 +717,8 @@
     return { rows: out, nonDaily: nonDaily };
   }
 
-  function adKey(a) { return a.date + "|" + a.ad + "|" + a.adset; }
+  function adKey(a) { return a.date + "|" + a.ad + "|" + a.adset + "|" + (a.account || ""); }
+  function adKeyLegacy(a) { return a.date + "|" + a.ad + "|" + a.adset; } // key lama (sebelum ada kolom akun)
 
   /* ---------------- modal ---------------- */
   function modal(title, bodyHtml, buttons) {
@@ -759,14 +790,27 @@
     var parsed = parsedObj.rows;
     var fresh = [], changed = [], same = [];
     parsed.forEach(function (a) {
-      var k = adKey(a), ex = store.ads[k];
-      if (!ex) fresh.push(a);
+      var ex = store.ads[adKey(a)];
+      if (!ex) {
+        // baris lama dari versi tanpa kolom akun: dianggap sama, di-upgrade dengan info akun
+        var exL = store.ads[adKeyLegacy(a)];
+        if (exL && !exL.account) {
+          a._legacyKey = adKeyLegacy(a);
+          if (exL.spent !== a.spent || exL.impressions !== a.impressions) changed.push(a);
+          else same.push(a);
+        } else fresh.push(a);
+      }
       else if (ex.spent !== a.spent || ex.impressions !== a.impressions) changed.push(a);
       else same.push(a);
     });
+    function put(a) {
+      if (a._legacyKey) { delete store.ads[a._legacyKey]; delete a._legacyKey; }
+      store.ads[adKey(a)] = a;
+    }
     function apply(withUpdates) {
-      fresh.forEach(function (a) { store.ads[adKey(a)] = a; });
-      if (withUpdates) changed.forEach(function (a) { store.ads[adKey(a)] = a; });
+      fresh.forEach(put);
+      same.forEach(function (a) { if (a._legacyKey) put(a); }); // migrasi key + isi akun walau angka tak berubah
+      if (withUpdates) changed.forEach(put);
       addLog(fileName, "ads", fresh.length, withUpdates ? changed.length : 0,
         same.length + (withUpdates ? 0 : changed.length),
         withUpdates && changed.length ? "tambah + perbarui angka" : "tambah baru");
@@ -856,7 +900,7 @@
             if (!type) throw new Error("File kosong atau tidak terbaca.");
             if (type === "order") return importOrders(parseOrders(rows), file.name);
             if (type === "cost") return importManualWithKind(parseManualCosts(rows), file.name);
-            var parsedAds = parseAds(rows);
+            var parsedAds = parseAds(rows, file.name);
             return importAds(parsedAds, file.name).then(function (ok) {
               if (ok && parsedAds.nonDaily > 0) {
                 return modal("Sebagian baris dilewati", "<p>" + parsedAds.nonDaily + " baris di file ini adalah rekap rentang tanggal (bukan harian) dan dilewati agar tidak dobel hitung.</p>", [{ label: "OK", value: 1, primary: true }]).then(function () { return ok; });
@@ -1342,6 +1386,7 @@
   function refreshShell() {
     var hasData = orders.length > 0 || adsRows.length > 0 || costRows.length > 0 || revRows.length > 0;
     document.getElementById("app").hidden = !hasData;
+    document.getElementById("stickyControls").hidden = !hasData;
     document.getElementById("dropzone").hidden = hasData;
     var meta = document.getElementById("fileMeta");
     if (hasData) {
@@ -1387,7 +1432,8 @@
       spendNet += a.spent; impr += a.impressions || 0; results += a.results || 0;
       var k = dayKey(a.date);
       dayMap[k] = (dayMap[k] || 0) + a.spent;
-      var b = (byAd[a.ad] = byAd[a.ad] || { spend: 0, impr: 0, results: 0, days: {}, adsets: {} });
+      var gk = (a.account || "") + "|" + a.ad;
+      var b = (byAd[gk] = byAd[gk] || { account: a.account || "", ad: a.ad, spend: 0, impr: 0, results: 0, days: {}, adsets: {} });
       b.spend += a.spent; b.impr += a.impressions || 0; b.results += a.results || 0;
       if (a.spent > 0) b.days[k] = 1;
       if (a.adset) b.adsets[a.adset] = 1;
@@ -1446,23 +1492,51 @@
     });
 
     /* tabel per iklan */
-    var ads = Object.keys(byAd).map(function (name) {
-      var b = byAd[name];
-      return { name: name, spend: b.spend, impr: b.impr, results: b.results,
+    var ads = Object.keys(byAd).map(function (gk) {
+      var b = byAd[gk];
+      return { account: b.account, name: b.ad, spend: b.spend, spendPpn: b.spend * (1 + PPN),
+        impr: b.impr, cpm: b.impr > 0 ? b.spend / b.impr * 1000 : null,
+        results: b.results, cpr: b.results > 0 ? b.spend / b.results : null,
+        share: spendNet > 0 ? b.spend / spendNet : null,
         days: Object.keys(b.days).length, adsets: Object.keys(b.adsets).length };
-    }).filter(function (a) { return a.spend > 0 || a.impr > 0; })
-      .sort(function (a, b) { return b.spend - a.spend; });
+    }).filter(function (a) { return a.spend > 0 || a.impr > 0; });
+
+    var sk = state.adsSortKey, sd = state.adsSortDir;
+    ads.sort(function (a, b) {
+      var va = a[sk], vb = b[sk], c;
+      if (typeof va === "string" || typeof vb === "string") c = String(va).localeCompare(String(vb), "id");
+      else c = (va == null ? -Infinity : va) - (vb == null ? -Infinity : vb);
+      if (c === 0) c = b.spend - a.spend;
+      return c * sd;
+    });
+
+    var ADS_COLS = [
+      { key: "account", label: "Akun" },
+      { key: "name", label: "Iklan" },
+      { key: "spend", label: "Spend (sblm PPN)", num: 1 },
+      { key: "spendPpn", label: "+ PPN 11%", num: 1 },
+      { key: "impr", label: "Impresi", num: 1 },
+      { key: "cpm", label: "CPM", num: 1 },
+      { key: "results", label: "Hasil", num: 1 },
+      { key: "cpr", label: "Biaya/hasil", num: 1 },
+      { key: "share", label: "% Spend", num: 1 },
+      { key: "days", label: "Hari aktif", num: 1 }
+    ];
     var t = document.getElementById("adsTable");
-    var html = "<thead><tr><th>Iklan</th><th class='num'>Spend (sblm PPN)</th><th class='num'>+ PPN 11%</th><th class='num'>Impresi</th><th class='num'>CPM</th><th class='num'>Hasil</th><th class='num'>Biaya/hasil</th><th class='num'>% Spend</th><th class='num'>Hari aktif</th></tr></thead><tbody>";
+    var html = "<thead><tr>" + ADS_COLS.map(function (c) {
+      var ind = sk === c.key ? '<span class="sort-ind">' + (sd > 0 ? "▲" : "▼") + "</span>" : '<span class="sort-ind" style="opacity:.35">⇅</span>';
+      return "<th class='sortable" + (c.num ? " num" : "") + "' data-adskey='" + c.key + "'>" + c.label + ind + "</th>";
+    }).join("") + "</tr></thead><tbody>";
     ads.forEach(function (a) {
-      html += "<tr><td>" + esc(a.name) + (a.adsets > 1 ? " <span style='color:var(--muted);font-size:11.5px'>(" + a.adsets + " ad set)</span>" : "") + "</td>" +
+      html += "<tr><td>" + (a.account ? esc(a.account) : "<span style='color:var(--muted)'>– upload ulang file utk isi akun</span>") + "</td>" +
+        "<td>" + esc(a.name) + (a.adsets > 1 ? " <span style='color:var(--muted);font-size:11.5px'>(" + a.adsets + " ad set)</span>" : "") + "</td>" +
         "<td class='num'>" + rp(a.spend) + "</td>" +
-        "<td class='num'>" + rp(a.spend * (1 + PPN)) + "</td>" +
+        "<td class='num'>" + rp(a.spendPpn) + "</td>" +
         "<td class='num'>" + fmtID.format(a.impr) + "</td>" +
-        "<td class='num'>" + (a.impr > 0 ? rpCompact(a.spend / a.impr * 1000) : "–") + "</td>" +
+        "<td class='num'>" + (a.cpm !== null ? rpCompact(a.cpm) : "–") + "</td>" +
         "<td class='num'>" + (a.results ? fmtID.format(a.results) : "–") + "</td>" +
-        "<td class='num'>" + (a.results ? rp(a.spend / a.results) : "–") + "</td>" +
-        "<td class='num'>" + (spendNet > 0 ? pct(a.spend / spendNet) : "–") + "</td>" +
+        "<td class='num'>" + (a.cpr !== null ? rp(a.cpr) : "–") + "</td>" +
+        "<td class='num'>" + (a.share !== null ? pct(a.share) : "–") + "</td>" +
         "<td class='num'>" + a.days + "</td></tr>";
     });
     t.innerHTML = html + "</tbody>";
@@ -1639,6 +1713,15 @@
     state.searchField = this.value;
     renderTable(currentRange());
   });
+  document.getElementById("adsTable").addEventListener("click", function (e) {
+    var th = e.target.closest("th[data-adskey]");
+    if (!th) return;
+    var key = th.dataset.adskey;
+    if (state.adsSortKey === key) state.adsSortDir = -state.adsSortDir;
+    else { state.adsSortKey = key; state.adsSortDir = (key === "account" || key === "name") ? 1 : -1; }
+    renderAdsPage(currentRange());
+  });
+
   document.getElementById("orderTable").addEventListener("click", function (e) {
     var th = e.target.closest("th.sortable");
     if (!th) return;
@@ -1680,6 +1763,14 @@
       refreshShell();
     });
   });
+
+  var toTop = document.getElementById("toTop");
+  toTop.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
+  var stickyHead = document.getElementById("stickyHead");
+  window.addEventListener("scroll", function () {
+    toTop.hidden = window.scrollY < 400;
+    stickyHead.classList.toggle("stuck", window.scrollY > 10);
+  }, { passive: true });
 
   var resizeTimer;
   window.addEventListener("resize", function () {
