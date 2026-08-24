@@ -123,6 +123,24 @@
   .chip:hover { background: var(--accent-soft); }
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 
+  /* ---------- login gate & akun ---------- */
+  .gate {
+    position: fixed; inset: 0; z-index: 90; background: var(--page);
+    display: flex; align-items: center; justify-content: center; padding: 20px;
+  }
+  .gate-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 34px 30px; max-width: 400px; width: 100%; text-align: center;
+  }
+  .gate-card h2 { font-family: "Sora", system-ui, sans-serif; font-size: 21px; margin: 0 0 6px; }
+  .gate-card p { color: var(--ink-2); font-size: 14px; margin: 0 0 20px; }
+  .gate-actions { display: flex; flex-direction: column; gap: 10px; }
+  .gate-actions .btn, .gate-actions .ghost { justify-content: center; width: 100%; }
+  .gate-err { color: var(--bad); font-size: 13px; margin-top: 14px; }
+  .acct { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+  .acct .who { background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
+  .mode-banner { background: var(--warn-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; }
+
   /* ---------- sticky header & back-to-top ---------- */
   .sticky-head { position: sticky; top: 0; z-index: 45; background: var(--page); padding-top: 8px; margin-top: -8px; }
   .sticky-head.stuck { border-bottom: 1px solid var(--grid); box-shadow: 0 6px 16px rgba(0,0,0,.07); }
@@ -305,10 +323,15 @@
     </div>
     <div class="upload-side">
       <div class="file-meta" id="fileMeta" hidden></div>
+      <div class="acct" id="acctBox" hidden>
+        <span class="who" id="acctName"></span>
+        <button class="ghost" id="btnLogout">Keluar</button>
+      </div>
       <button class="btn" id="btnUpload">⬆ Upload CSV</button>
       <input type="file" id="fileInput" accept=".csv,text/csv" multiple hidden>
     </div>
   </div>
+  <div class="mode-banner" id="modeBanner" hidden></div>
 
   <div id="stickyControls" hidden>
     <div class="filters">
@@ -332,9 +355,22 @@
   </div>
   </div><!-- /sticky-head -->
 
+  <div class="gate" id="gate" hidden>
+    <div class="gate-card">
+      <h2>📈 Ruang Peta Revenue</h2>
+      <p id="gateMsg">Masuk untuk melihat dashboard.</p>
+      <div class="gate-actions" id="gateActions" hidden>
+        <button class="btn" id="btnGoogle">Masuk dengan Google</button>
+        <button class="ghost" id="btnGuest">Masuk sebagai Tamu (hanya lihat)</button>
+      </div>
+      <div class="gate-err" id="gateErr" hidden></div>
+      <p class="muted-note" style="margin-top:18px">Upload &amp; ubah data hanya untuk akun resmi Alfalee. Tamu bisa melihat seluruh laporan.</p>
+    </div>
+  </div>
+
   <div class="dropzone" id="dropzone">
-    <h2>Tarik &amp; letakkan file CSV di sini</h2>
-    <p>Bisa dua jenis file sekaligus — dashboard mengenali otomatis. Data diproses sepenuhnya di browser dan <b>bertambah</b> setiap upload (tidak menimpa data lama).</p>
+    <h2 id="dzTitle">Tarik &amp; letakkan file CSV di sini</h2>
+    <p id="dzDesc">Bisa dua jenis file sekaligus — dashboard mengenali otomatis. Data <b>bertambah</b> setiap upload (tidak menimpa data lama).</p>
     <button class="ghost" id="btnUpload2">Pilih file…</button>
     <div class="dz-steps">
       <b>1 · Data penjualan</b> — Scalev → Order → Export → <b>Order with Product (CSV)</b>.<br>
@@ -444,6 +480,19 @@
 <div id="tip"></div>
 
 <script>
+/* ====== KONFIGURASI FIREBASE ======
+   Isi dengan config dari Firebase Console → Project settings → Your apps (Web).
+   Selama apiKey masih berawalan "GANTI", dashboard berjalan dalam MODE LOKAL
+   (data di browser masing-masing, tanpa login) — persis seperti versi sebelumnya. */
+window.FIREBASE_CONFIG = {
+  apiKey: "GANTI_DENGAN_API_KEY",
+  authDomain: "GANTI.firebaseapp.com",
+  projectId: "GANTI_PROJECT_ID"
+};
+window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang boleh upload/ubah data
+</script>
+
+<script>
 (function () {
   "use strict";
 
@@ -525,7 +574,30 @@
   var orders = [], adsRows = [], costRows = [], revRows = [], variantNames = [];
   var state = { start: null, end: null, rangeLabel: "Semua data", search: "", searchField: "all", reportWeek: null, sortKey: "draft", sortDir: -1, chartMode: "both", adsSortKey: "spend", adsSortDir: -1 };
 
+  /* ---------------- mode cloud (Firebase) vs lokal ---------------- */
+  var OWNER_EMAIL = window.OWNER_EMAIL || "alfaleeindonesia@gmail.com";
+  var CFG = window.FIREBASE_CONFIG || {};
+  var cloudConfigured = !!(CFG.apiKey && CFG.apiKey.indexOf("GANTI") === -1);
+  var mode = "local";           // 'local' | 'cloud'
+  var cloud = null, cloudUser = null, subscribed = false;
+  var cloudSeen = { orders: false, ads: false, costs: false, revs: false, log: false };
+  var migrationOffered = false;
+
+  function canUpload() {
+    if (mode === "local") return true;
+    return !!(cloudUser && !cloudUser.isAnonymous && cloudUser.email === OWNER_EMAIL);
+  }
+
   function saveStore() {
+    if (mode === "cloud") {
+      if (!canUpload() || !cloud) return;
+      ["orders", "ads", "costs", "revs", "log"].forEach(function (n) {
+        cloud.save(n, JSON.stringify(store[n])).catch(function (err) {
+          alert("Gagal menyimpan '" + n + "' ke cloud: " + err.message);
+        });
+      });
+      return;
+    }
     try { localStorage.setItem(LSK, JSON.stringify(store)); }
     catch (e) { alert("Peringatan: penyimpanan browser penuh/diblokir — data tetap tampil, tapi tidak akan tersimpan setelah halaman ditutup."); }
   }
@@ -881,6 +953,7 @@
   }
 
   function handleFiles(fileList) {
+    if (!canUpload()) { alert("Hanya akun resmi (" + OWNER_EMAIL + ") yang bisa meng-upload data. Kamu masuk sebagai " + (cloudUser && cloudUser.email ? cloudUser.email : "Tamu") + "."); return; }
     var files = Array.prototype.slice.call(fileList || []);
     if (!files.length) return;
     var chain = Promise.resolve();
@@ -1385,9 +1458,23 @@
   /* ---------------- shell ---------------- */
   function refreshShell() {
     var hasData = orders.length > 0 || adsRows.length > 0 || costRows.length > 0 || revRows.length > 0;
+    var can = canUpload();
     document.getElementById("app").hidden = !hasData;
     document.getElementById("stickyControls").hidden = !hasData;
     document.getElementById("dropzone").hidden = hasData;
+    document.getElementById("btnUpload").hidden = !can;
+    document.getElementById("btnReset").hidden = !can;
+    document.getElementById("btnUpload2").hidden = !can;
+    document.getElementById("dzTitle").textContent = can ? "Tarik & letakkan file CSV di sini" : "Belum ada data";
+    document.getElementById("dzDesc").innerHTML = can
+      ? "Bisa beberapa file sekaligus — dashboard mengenali otomatis. Data <b>bertambah</b> setiap upload (tidak menimpa data lama)."
+      : "Data akan tampil setelah akun resmi Alfalee meng-upload laporan. Akunmu hanya bisa melihat.";
+    document.querySelector(".dz-steps").hidden = !can;
+    var acct = document.getElementById("acctBox");
+    if (mode === "cloud" && cloudUser) {
+      acct.hidden = false;
+      document.getElementById("acctName").textContent = cloudUser.isAnonymous ? "👁 Tamu (hanya lihat)" : cloudUser.email;
+    } else acct.hidden = true;
     var meta = document.getElementById("fileMeta");
     if (hasData) {
       meta.hidden = false;
@@ -1758,7 +1845,8 @@
     ).then(function (c) {
       if (c !== "yes") return;
       store = { orders: {}, ads: {}, costs: {}, revs: {}, log: [] };
-      try { localStorage.removeItem(LSK); } catch (e) {}
+      if (mode === "cloud") saveStore();
+      else try { localStorage.removeItem(LSK); } catch (e) {}
       rebuild();
       refreshShell();
     });
@@ -1778,17 +1866,164 @@
     resizeTimer = setTimeout(function () { if (orders.length || adsRows.length) render(); }, 200);
   });
 
-  /* ---------------- init ---------------- */
-  migrateV1();
-  try {
-    var saved = localStorage.getItem(LSK);
-    if (saved) {
-      var parsed = JSON.parse(saved);
-      if (parsed && parsed.orders) store = { orders: parsed.orders || {}, ads: parsed.ads || {}, costs: parsed.costs || {}, revs: parsed.revs || {}, log: parsed.log || [] };
+  /* ---------------- gate & boot ---------------- */
+  var gate = document.getElementById("gate");
+  function showGate(stateName, err) {
+    gate.hidden = false;
+    document.getElementById("gateActions").hidden = stateName !== "login";
+    document.getElementById("gateMsg").textContent =
+      stateName === "connect" ? "Menghubungkan ke server…" : "Masuk untuk melihat dashboard.";
+    var e = document.getElementById("gateErr");
+    e.hidden = !err;
+    if (err) e.textContent = err;
+  }
+  function hideGate() { gate.hidden = true; }
+  function setBanner(msg) {
+    var b = document.getElementById("modeBanner");
+    b.hidden = !msg;
+    if (msg) b.textContent = msg;
+  }
+
+  function readLocalStore() {
+    try {
+      var saved = localStorage.getItem(LSK);
+      if (saved) {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.orders) return { orders: parsed.orders || {}, ads: parsed.ads || {}, costs: parsed.costs || {}, revs: parsed.revs || {}, log: parsed.log || [] };
+      }
+    } catch (e) { }
+    return null;
+  }
+
+  function bootLocal(bannerMsg) {
+    mode = "local";
+    hideGate();
+    if (bannerMsg) setBanner(bannerMsg);
+    migrateV1();
+    var s = readLocalStore();
+    if (s) store = s;
+    rebuild();
+    refreshShell();
+    if (orders.length || adsRows.length || costRows.length || revRows.length) { renderReportOptions(); render(); }
+  }
+
+  /* -- hooks dipanggil dari <script type="module"> Firebase -- */
+  var applyTimer = null;
+  window.__cloudReady = function (api) {
+    cloud = api;
+    mode = "cloud";
+  };
+  window.__cloudFail = function (e) {
+    if (mode === "cloud" && cloudUser) return; // sudah jalan; abaikan
+    bootLocal("⚠ Mode lokal — Firebase tidak terhubung (" + (e && e.message ? e.message : e) + "). Data hanya tersimpan di browser ini.");
+  };
+  window.__authChanged = function (u) {
+    cloudUser = u;
+    if (!u) {
+      store = { orders: {}, ads: {}, costs: {}, revs: {}, log: [] };
+      subscribed = false;
+      cloudSeen = { orders: false, ads: false, costs: false, revs: false, log: false };
+      rebuild(); refreshShell();
+      showGate("login");
+      return;
     }
-  } catch (e) { /* mulai kosong */ }
-  rebuild();
-  refreshShell();
-  if (orders.length || adsRows.length) { renderReportOptions(); render(); }
+    hideGate();
+    refreshShell();
+    if (!subscribed) {
+      subscribed = true;
+      cloud.subscribe(function (name, jsonStr) {
+        cloudSeen[name] = true;
+        try { store[name] = jsonStr ? JSON.parse(jsonStr) : (name === "log" ? [] : {}); }
+        catch (e) { store[name] = (name === "log" ? [] : {}); }
+        clearTimeout(applyTimer);
+        applyTimer = setTimeout(applyCloudData, 120);
+      }, function (name, err) {
+        setBanner("⚠ Gagal membaca data '" + name + "' dari cloud: " + err.message);
+      });
+    }
+  };
+
+  function applyCloudData() {
+    rebuild();
+    refreshShell();
+    renderReportOptions();
+    if (orders.length || adsRows.length || costRows.length || revRows.length) render();
+    offerMigration();
+  }
+
+  function offerMigration() {
+    if (migrationOffered || !canUpload()) return;
+    var allSeen = cloudSeen.orders && cloudSeen.ads && cloudSeen.costs && cloudSeen.revs && cloudSeen.log;
+    if (!allSeen) return;
+    var cloudEmpty = !Object.keys(store.orders).length && !Object.keys(store.ads).length && !Object.keys(store.costs).length && !Object.keys(store.revs).length;
+    var local = readLocalStore();
+    if (!cloudEmpty || !local || !Object.keys(local.orders || {}).length) { migrationOffered = true; return; }
+    migrationOffered = true;
+    modal("Pindahkan data lokal ke cloud?",
+      "<p>Cloud masih kosong, tapi browser ini menyimpan data lama (" + Object.keys(local.orders).length + " order, " + Object.keys(local.ads || {}).length + " baris iklan). Pindahkan ke cloud supaya bisa dilihat semua orang?</p>",
+      [{ label: "Ya, pindahkan ke cloud", value: "yes", primary: true }, { label: "Tidak, mulai kosong", value: null }]
+    ).then(function (c) {
+      if (c !== "yes") return;
+      store = local;
+      saveStore();
+      rebuild(); refreshShell(); renderReportOptions(); render();
+    });
+  }
+
+  document.getElementById("btnGoogle").addEventListener("click", function () {
+    cloud.signInGoogle().catch(function (e) { showGate("login", "Gagal masuk: " + e.message); });
+  });
+  document.getElementById("btnGuest").addEventListener("click", function () {
+    cloud.signInGuest().catch(function (e) { showGate("login", "Gagal masuk sebagai tamu: " + e.message + " (pastikan Anonymous sign-in aktif di Firebase)"); });
+  });
+  document.getElementById("btnLogout").addEventListener("click", function () {
+    if (cloud) cloud.signOut();
+  });
+
+  /* ---------------- init ---------------- */
+  if (!cloudConfigured) {
+    bootLocal(null);
+  } else {
+    showGate("connect");
+    setTimeout(function () {
+      if (!cloud && mode !== "local") window.__cloudFail(new Error("timeout menghubungi Firebase"));
+    }, 9000);
+  }
+})();
+</script>
+
+<script type="module">
+/* Lapisan Firebase — hanya aktif jika FIREBASE_CONFIG sudah diisi.
+   Gagal load (mis. offline / CSP artifact) → dashboard otomatis jatuh ke mode lokal. */
+(async function () {
+  var cfg = window.FIREBASE_CONFIG || {};
+  if (!cfg.apiKey || cfg.apiKey.indexOf("GANTI") !== -1) return;
+  try {
+    var base = "https://www.gstatic.com/firebasejs/10.12.2/";
+    var appMod = await import(base + "firebase-app.js");
+    var authMod = await import(base + "firebase-auth.js");
+    var fsMod = await import(base + "firebase-firestore.js");
+    var app = appMod.initializeApp(cfg);
+    var auth = authMod.getAuth(app);
+    var db = fsMod.getFirestore(app);
+    window.__cloudReady({
+      signInGoogle: function () { return authMod.signInWithPopup(auth, new authMod.GoogleAuthProvider()); },
+      signInGuest: function () { return authMod.signInAnonymously(auth); },
+      signOut: function () { return authMod.signOut(auth); },
+      save: function (name, json) {
+        return fsMod.setDoc(fsMod.doc(db, "dashboard", name), { json: json, updatedAt: fsMod.serverTimestamp() });
+      },
+      subscribe: function (cb, onErr) {
+        ["orders", "ads", "costs", "revs", "log"].forEach(function (n) {
+          fsMod.onSnapshot(fsMod.doc(db, "dashboard", n), function (snap) {
+            cb(n, snap.exists() ? snap.data().json : null);
+          }, function (err) { onErr(n, err); });
+        });
+      }
+    });
+    authMod.onAuthStateChanged(auth, function (u) { window.__authChanged(u); });
+  } catch (e) {
+    window.__cloudFail(e);
+  }
 })();
 </script>
