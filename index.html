@@ -212,12 +212,13 @@
   .card-orange { --ca: var(--acc-orange); --ct: var(--tint-orange); }
   .card[class*="card-"] { border-top: 3px solid var(--ca); }
   .card-yellow pre.report { background: var(--tint-yellow); border-color: transparent; }
+  .card h3[data-ic] { display: flex; align-items: center; gap: 9px; }
   .card h3[data-ic]::before {
     content: attr(data-ic);
     display: inline-flex; align-items: center; justify-content: center;
-    width: 28px; height: 28px; border-radius: 8px;
+    flex: none; width: 28px; height: 28px; border-radius: 8px;
     background: var(--ct, var(--tint-grey));
-    font-size: 14px; margin-right: 9px; vertical-align: -8px;
+    font-size: 14px;
   }
   .tab.active { background: var(--tint-blue); border-radius: 8px 8px 0 0; }
   .gate-card { border-top: 4px solid var(--acc-blue); }
@@ -553,7 +554,7 @@
         </div>
         <button class="ghost danger" id="btnReset">Hapus semua data</button>
       </div>
-      <div class="tbl-wrap"><table id="logTable"></table></div>
+      <div class="tbl-scroll" id="logScroll"><table id="logTable"></table></div>
     </div>
     </div><!-- /pageSummary -->
 
@@ -1552,6 +1553,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         "<td>" + esc(l.action) + "</td></tr>";
     });
     t.innerHTML = html + "</tbody>";
+    var wrap = document.getElementById("logScroll");
+    wrap.style.maxHeight = "";
+    var trs = t.tBodies[0] ? t.tBodies[0].rows : [];
+    if (trs.length > 5 && trs[5].offsetTop > 0) wrap.style.maxHeight = trs[5].offsetTop + "px";
   }
 
   /* ---------------- shell ---------------- */
@@ -1729,9 +1734,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     var wrap = document.getElementById("adsTableScroll");
     wrap.style.maxHeight = "";
     var trs = t.tBodies[0] ? t.tBodies[0].rows : [];
-    if (trs.length > 10 && trs[10].offsetTop > 0) wrap.style.maxHeight = trs[10].offsetTop + "px";
+    if (trs.length > 5 && trs[5].offsetTop > 0) wrap.style.maxHeight = trs[5].offsetTop + "px";
     document.getElementById("adsTableNote").textContent = ads.length
-      ? ads.length + " iklan aktif di periode ini" + (trs.length > 10 ? " — scroll di dalam kotak untuk melihat semuanya." : ".")
+      ? ads.length + " iklan aktif di periode ini" + (trs.length > 5 ? " — scroll di dalam kotak untuk melihat semuanya, klik judul kolom untuk mengurutkan." : ".")
       : "Belum ada data iklan di periode ini — upload CSV harian Meta Ads.";
   }
 
