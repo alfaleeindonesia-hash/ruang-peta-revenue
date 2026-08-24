@@ -2126,12 +2126,16 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     if (mode === "cloud" && cloudUser) return; // sudah jalan; abaikan
     bootLocal("⚠ Mode lokal — Firebase tidak terhubung (" + (e && e.message ? e.message : e) + "). Data hanya tersimpan di browser ini.");
   };
+  var cloudUnsubs = [];
   window.__authChanged = function (u) {
     cloudUser = u;
     if (!u) {
+      cloudUnsubs.forEach(function (un) { try { un(); } catch (e) { } });
+      cloudUnsubs = [];
       store = { orders: {}, ads: {}, costs: {}, revs: {}, log: [] };
       subscribed = false;
       cloudSeen = { orders: false, ads: false, costs: false, revs: false, log: false };
+      setBanner(null);
       rebuild(); refreshShell();
       showGate("login");
       return;
@@ -2140,15 +2144,16 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     refreshShell();
     if (!subscribed) {
       subscribed = true;
-      cloud.subscribe(function (name, jsonStr) {
+      cloudUnsubs = cloud.subscribe(function (name, jsonStr) {
         cloudSeen[name] = true;
         try { store[name] = jsonStr ? JSON.parse(jsonStr) : (name === "log" ? [] : {}); }
         catch (e) { store[name] = (name === "log" ? [] : {}); }
         clearTimeout(applyTimer);
         applyTimer = setTimeout(applyCloudData, 120);
       }, function (name, err) {
-        setBanner("⚠ Gagal membaca data '" + name + "' dari cloud: " + err.message);
-      });
+        setBanner("⚠ Gagal membaca data '" + name + "' dari cloud: " + err.message +
+          (String(err.message).indexOf("permission") !== -1 ? " — cek Firestore Rules: baris read harus `request.auth != null`." : ""));
+      }) || [];
     }
   };
 
@@ -2224,8 +2229,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         return fsMod.setDoc(fsMod.doc(db, "dashboard", name), { json: json, updatedAt: fsMod.serverTimestamp() });
       },
       subscribe: function (cb, onErr) {
-        ["orders", "ads", "costs", "revs", "log"].forEach(function (n) {
-          fsMod.onSnapshot(fsMod.doc(db, "dashboard", n), function (snap) {
+        return ["orders", "ads", "costs", "revs", "log"].map(function (n) {
+          return fsMod.onSnapshot(fsMod.doc(db, "dashboard", n), function (snap) {
             cb(n, snap.exists() ? snap.data().json : null);
           }, function (err) { onErr(n, err); });
         });
