@@ -620,6 +620,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   var DAY = ["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
   function fmtDate(d) { return d.getDate() + " " + MON[d.getMonth()]; }
   function fmtDateY(d) { return d.getDate() + " " + MON[d.getMonth()] + " " + d.getFullYear(); }
+  function sameMonth(a, b) { return a.getMonth() === b.getMonth() && a.getFullYear() === b.getFullYear(); }
+  function fmtWeek(s, e) { // "13 – 19 Jul 2026" jika sebulan; "29 Jun – 5 Jul 2026" jika lintas bulan
+    return sameMonth(s, e) ? s.getDate() + " – " + fmtDateY(e) : fmtDate(s) + " – " + fmtDateY(e);
+  }
   function fmtDateTime(d) {
     return fmtDateY(d) + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
   }
@@ -1423,7 +1427,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         var dd = (w.d.rev - prev) / prev;
         wow = '<span class="' + (dd >= 0 ? "delta-up" : "delta-down") + '">' + (dd >= 0 ? "▲" : "▼") + " " + pct(Math.abs(dd)) + "</span>";
       }
-      html += "<tr><td class='wk'>" + fmtDate(w.start) + " –<br>" + fmtDateY(w.end) + "</td>" +
+      var wkLbl = sameMonth(w.start, w.end)
+        ? w.start.getDate() + " – " + fmtDateY(w.end)
+        : fmtDate(w.start) + " –<br>" + fmtDateY(w.end);
+      html += "<tr><td class='wk'>" + wkLbl + "</td>" +
         "<td class='num'>" + w.d.orders + "</td><td class='num'>" + w.d.paid + "</td>" +
         "<td class='num'>" + rp(w.d.rev) + "</td>" +
         (showRevM ? "<td class='num'>" + (w.d.revManual > 0 ? rp(w.d.revManual) : "–") + "</td>" : "") +
@@ -1448,7 +1455,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     rows.slice().reverse().forEach(function (w) {
       var opt = document.createElement("option");
       opt.value = w.start.getTime();
-      opt.textContent = "Minggu " + fmtDate(w.start) + " – " + fmtDateY(w.end);
+      opt.textContent = "Minggu " + fmtWeek(w.start, w.end);
       sel.appendChild(opt);
     });
     if (rows.length) {
@@ -1477,7 +1484,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     var lines = [];
     var push = function (x) { lines.push(x); };
     push("📊 LAPORAN MINGGUAN — Ruang Peta");
-    push("Periode: " + fmtDate(s) + " – " + fmtDateY(addDays(s, 6)));
+    push("Periode: " + fmtWeek(s, addDays(s, 6)));
     push("");
     push("Revenue paid: " + rp(sum.grossPaid) + wow);
     push("Net revenue (setelah fee): " + rp(sum.netPaid));
