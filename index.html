@@ -2157,12 +2157,18 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     }
   };
 
+  var cloudNormalized = false;
   function applyCloudData() {
-    rebuild();
+    rebuild(); // maskStore() di dalamnya menyamarkan data di memori
     refreshShell();
     renderReportOptions();
     if (orders.length || adsRows.length || costRows.length || revRows.length) render();
     offerMigration();
+    // owner: tulis ulang data cloud sekali per sesi agar versi tersimpan di server ikut tersamar
+    if (!cloudNormalized && canUpload() && cloudSeen.orders && cloudSeen.ads && cloudSeen.costs && cloudSeen.revs && cloudSeen.log && orders.length) {
+      cloudNormalized = true;
+      saveStore();
+    }
   }
 
   function offerMigration() {
