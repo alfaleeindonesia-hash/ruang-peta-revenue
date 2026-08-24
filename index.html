@@ -552,7 +552,11 @@
           <h3 data-ic="🕓">Riwayat upload</h3>
           <p class="c-sub" style="margin-bottom:0">Semua file yang pernah diupload ke dashboard ini</p>
         </div>
-        <button class="ghost danger" id="btnReset">Hapus semua data</button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap">
+          <button class="ghost" id="btnExport">⬇ Cadangkan data</button>
+          <button class="ghost" id="btnPaste">📋 Tempel cadangan</button>
+          <button class="ghost danger" id="btnReset">Hapus semua data</button>
+        </div>
       </div>
       <div class="tbl-scroll" id="logScroll"><table id="logTable"></table></div>
     </div>
@@ -691,6 +695,26 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     return !!(cloudUser && !cloudUser.isAnonymous && cloudUser.email === OWNER_EMAIL);
   }
 
+  /* ---------------- penyamaran data pribadi ---------------- */
+  function maskName(s) {
+    return String(s || "").split(/\s+/).map(function (w) {
+      if (w.length <= 2) return w;
+      return w[0] + new Array(w.length - 1).join("*") + w[w.length - 1];
+    }).join(" ");
+  }
+  function maskPhone(s) {
+    s = String(s || "");
+    if (s.length <= 4) return s;
+    return s.slice(0, -4).replace(/./g, "*") + s.slice(-4);
+  }
+  function maskStore() { // idempotan — aman dipanggil berulang
+    Object.keys(store.orders).forEach(function (k) {
+      var o = store.orders[k];
+      o.name = maskName(o.name);
+      o.phone = maskPhone(o.phone);
+    });
+  }
+
   function saveStore() {
     if (mode === "cloud") {
       if (!canUpload() || !cloud) return;
@@ -706,6 +730,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   }
 
   function rebuild() {
+    maskStore();
     orders = Object.keys(store.orders).map(function (k) {
       var o = store.orders[k];
       var c = Object.assign({}, o);
@@ -828,8 +853,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       if (byId[oid]) { byId[oid].qty += (qty || 1); continue; } // file product_based: satu order bisa >1 baris item
       out.push(byId[oid] = {
         id: oid,
-        name: g(row, "name"),
-        phone: g(row, "phone"),
+        name: maskName(g(row, "name")),
+        phone: maskPhone(g(row, "phone")),
         draft: draft.getTime(),
         paidAt: paidAt.getTime(),
         isPaid: payStatus === "settled" || payStatus === "paid",
@@ -1069,6 +1094,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
           reader.readAsText(file);
         }).then(function (text) {
           if (text == null) { alert("Gagal membaca file " + file.name); return; }
+          if (/\.json$/i.test(file.name) || text.trim().charAt(0) === "{") {
+            return importBackup(text.trim(), file.name);
+          }
           var rows, type;
           try {
             rows = parseCSV(text);
@@ -1550,6 +1578,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       var kind = l.kind === "order" ? '<span class="pill pill-info">Order Scalev</span>'
         : l.kind === "cost" ? '<span class="pill pill-info">Biaya manual</span>'
         : l.kind === "rev" ? '<span class="pill pill-info">Revenue manual</span>'
+        : l.kind === "backup" ? '<span class="pill pill-info">Cadangan</span>'
         : '<span class="pill pill-info">Biaya iklan</span>';
       html += "<tr><td>" + fmtDateTime(new Date(l.ts)) + "</td><td>" + esc(l.file) + "</td><td>" + kind + "</td>" +
         "<td class='num'>" + l.added + "</td><td class='num'>" + l.updated + "</td><td class='num'>" + l.skipped + "</td>" +
@@ -1572,6 +1601,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     document.getElementById("btnUpload").hidden = !can;
     document.getElementById("btnReset").hidden = !can;
     document.getElementById("btnUpload2").hidden = !can;
+    document.getElementById("btnExport").hidden = !can;
+    document.getElementById("btnPaste").hidden = !can;
     document.getElementById("dzTitle").textContent = can ? "Tarik & letakkan file CSV di sini" : "Belum ada data";
     document.getElementById("dzDesc").innerHTML = can
       ? "Bisa beberapa file sekaligus — dashboard mengenali otomatis. Data <b>bertambah</b> setiap upload (tidak menimpa data lama)."
@@ -1945,6 +1976,77 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     } else { fallbackCopy(text); done(); }
   });
 
+  /* ---- cadangan JSON: pindah data antar versi/perangkat tanpa upload ulang CSV ---- */
+  function importBackup(text, sourceLabel) {
+    var data;
+    try {
+      data = JSON.parse(text);
+      if (!data || typeof data.orders !== "object") throw new Error("bukan file cadangan dashboard");
+    } catch (e) {
+      alert("Cadangan tidak valid: " + e.message);
+      return Promise.resolve(false);
+    }
+    var buckets = ["orders", "ads", "costs", "revs"];
+    var counts = {}, totalNew = 0;
+    buckets.forEach(function (b) {
+      var src = data[b] || {};
+      counts[b] = Object.keys(src).filter(function (k) { return !store[b][k]; }).length;
+      totalNew += counts[b];
+    });
+    var body = "<p>Cadangan dari <b>" + esc(sourceLabel) + "</b> berisi:</p><ul>" +
+      "<li>" + counts.orders + " order baru</li><li>" + counts.ads + " baris iklan baru</li>" +
+      "<li>" + counts.costs + " biaya manual baru</li><li>" + counts.revs + " revenue manual baru</li></ul>" +
+      (totalNew === 0 ? "<p>Semua data di cadangan ini sudah ada di dashboard.</p>" : "<p>Data yang sudah ada tidak akan tertimpa.</p>");
+    return modal("Gabungkan data cadangan?", body,
+      totalNew === 0
+        ? [{ label: "OK", value: null, primary: true }]
+        : [{ label: "Gabungkan " + totalNew + " data baru", value: "go", primary: true }, { label: "Batal", value: null }]
+    ).then(function (c) {
+      if (c !== "go") return false;
+      buckets.forEach(function (b) {
+        var src = data[b] || {};
+        Object.keys(src).forEach(function (k) { if (!store[b][k]) store[b][k] = src[k]; });
+      });
+      addLog(sourceLabel, "backup", totalNew, 0, 0,
+        counts.orders + " order · " + counts.ads + " iklan · " + counts.costs + " biaya · " + counts.revs + " revenue");
+      maskStore();
+      saveStore();
+      rebuild(); refreshShell(); renderReportOptions(); render();
+      return true;
+    });
+  }
+
+  document.getElementById("btnExport").addEventListener("click", function () {
+    var btn = this;
+    var json = JSON.stringify(store);
+    function done() { btn.textContent = "Tersalin ✓ — tempel di dashboard tujuan"; setTimeout(function () { btn.textContent = "⬇ Cadangkan data"; }, 3500); }
+    function fallback() {
+      var ta = document.createElement("textarea");
+      ta.value = json; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); } catch (e) {}
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(json).then(done, function () { fallback(); done(); });
+    else { fallback(); done(); }
+    try { // unduhan file .json sekalian, jika lingkungan mengizinkan
+      var a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+      a.download = "ruang-peta-data.json";
+      a.click();
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 5000);
+    } catch (e) { }
+  });
+
+  document.getElementById("btnPaste").addEventListener("click", function () {
+    if (!canUpload()) { alert("Hanya akun resmi yang bisa menambahkan data."); return; }
+    if (navigator.clipboard && navigator.clipboard.readText) {
+      navigator.clipboard.readText().then(function (t) {
+        if (!t || !t.trim()) { alert("Clipboard kosong. Klik “Cadangkan data” di dashboard sumber dulu."); return; }
+        importBackup(t.trim(), "clipboard");
+      }, function () { alert("Tidak bisa membaca clipboard — izinkan akses clipboard, atau tarik file .json cadangannya ke halaman ini."); });
+    } else alert("Browser tidak mendukung baca clipboard — tarik file .json cadangannya ke halaman ini.");
+  });
+
   document.getElementById("btnReset").addEventListener("click", function () {
     modal("Hapus semua data?",
       "<p>Seluruh data order, biaya iklan, dan riwayat upload di dashboard ini akan dihapus permanen dari browser. File CSV asli kamu tidak terpengaruh.</p>",
@@ -2072,6 +2174,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     ).then(function (c) {
       if (c !== "yes") return;
       store = local;
+      maskStore();
       saveStore();
       rebuild(); refreshShell(); renderReportOptions(); render();
     });
