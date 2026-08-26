@@ -418,7 +418,7 @@
   <div class="topbar">
     <div class="brand">
       <h1>Ruang PETA Dashboard</h1>
-      <div class="sub">Laporan mingguan revenue vs biaya · Scalev + Meta Ads · <b>v10.3</b></div>
+      <div class="sub">Laporan mingguan revenue vs biaya · Scalev + Meta Ads · <b>v10.4</b></div>
     </div>
     <div class="upload-side">
       <div class="acct" id="acctBox" hidden>
@@ -507,7 +507,7 @@
 
     <div class="card card-green">
       <h3 data-ic="🗓️">Rekap untung / rugi per minggu</h3>
-      <p class="c-sub">Minggu Senin–Minggu · biaya iklan = angka Meta + PPN 11% (upload = sebelum PPN) · biaya lain = input manual, tanpa markup PPN · profit = net revenue − (biaya iklan incl. PPN + biaya lain) · ROAS = revenue paid ÷ biaya iklan incl. PPN</p>
+      <p class="c-sub">Minggu berjalan Sabtu–Jumat · biaya iklan = angka Meta + PPN 11% (upload = sebelum PPN) · biaya lain = input manual, tanpa markup PPN · profit = net revenue − (biaya iklan incl. PPN + biaya lain) · ROAS = revenue paid ÷ biaya iklan incl. PPN</p>
       <div class="tbl-scroll" id="weeklyScroll"><table id="weeklyTable"></table></div>
     </div>
 
@@ -634,7 +634,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
   }
   function startOfDay(d) { var x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
-  function weekStart(d) { var x = startOfDay(d); x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; }
+  function weekStart(d) { var x = startOfDay(d); x.setDate(x.getDate() - ((x.getDay() + 1) % 7)); return x; } // minggu berjalan Sabtu–Jumat
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
   function esc(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
