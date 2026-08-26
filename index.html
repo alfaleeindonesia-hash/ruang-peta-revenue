@@ -1002,25 +1002,51 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   function importAds(parsedObj, fileName) {
     var parsed = parsedObj.rows;
     var level = parsedObj.level || "ad";
-    var accs = {};
-    parsed.forEach(function (a) { accs[a.account || ""] = 1; });
-    var mixed = Object.keys(accs).filter(function (acc) {
-      return Object.keys(store.ads).some(function (k) {
-        var e = store.ads[k];
-        return (e.account || "") === acc && (e.level || "ad") !== level;
-      });
+
+    // baris hasil parse versi lama (tanpa nama & tanpa akun) merusak laporan — tawarkan bersihkan dulu
+    var junkKeys = Object.keys(store.ads).filter(function (k) {
+      var e = store.ads[k];
+      return !e.account && e.ad === "(tanpa nama)";
     });
-    var pre = Promise.resolve("go");
-    if (mixed.length) {
-      pre = modal("⚠ Risiko dobel hitung",
+    var junkStep = Promise.resolve("go");
+    if (junkKeys.length) {
+      junkStep = modal("Data iklan versi lama terdeteksi",
+        "<p>Ada <b>" + junkKeys.length + "</b> baris iklan tersimpan <b>tanpa nama & tanpa akun</b> — hasil upload dari halaman versi lama yang belum bisa membaca file Campaigns. Baris-baris ini membuat laporan menyatu jadi satu baris “(tanpa nama)” dan bisa dobel hitung dengan file yang sedang di-upload.</p>",
+        [{ label: "Hapus " + junkKeys.length + " baris lama, lalu lanjutkan (disarankan)", value: "clean", primary: true },
+         { label: "Biarkan, tetap lanjut upload", value: "keep" },
+         { label: "Batal", value: null }]
+      ).then(function (c) {
+        if (c === null) return "cancel";
+        if (c === "clean") {
+          junkKeys.forEach(function (k) { delete store.ads[k]; });
+          addLog("pembersihan otomatis", "del", 0, 0, 0, "hapus " + junkKeys.length + " baris iklan tanpa nama (hasil versi lama)");
+        }
+        return "go";
+      });
+    }
+
+    return junkStep.then(function (st) {
+      if (st === "cancel") { addLog(fileName, "ads", 0, 0, parsed.length, "dibatalkan"); return false; }
+      var accs = {};
+      parsed.forEach(function (a) { accs[a.account || ""] = 1; });
+      var mixed = Object.keys(accs).filter(function (acc) {
+        return Object.keys(store.ads).some(function (k) {
+          var e = store.ads[k];
+          return (e.account || "") === acc && (e.level || "ad") !== level;
+        });
+      });
+      var pre = Promise.resolve("go");
+      if (mixed.length) {
+        pre = modal("⚠ Risiko dobel hitung",
         "<p>File ini level <b>" + (level === "campaign" ? "Kampanye" : "Iklan") + "</b>, sedangkan akun <b>" + esc(mixed.join(", ")) +
         "</b> sudah punya data level <b>" + (level === "campaign" ? "Iklan" : "Kampanye") + "</b> di dashboard.</p>" +
         "<p>Kalau periodenya tumpang tindih, spend yang sama akan terhitung <b>dua kali</b> (file Kampanye adalah rekap dari iklan-iklan yang sama). Sebaiknya pakai satu level saja per akun — hapus dulu data lamanya, atau batalkan upload ini.</p>",
         [{ label: "Saya paham, tetap upload", value: "go" }, { label: "Batal — jangan upload file ini", value: null, primary: true }]);
-    }
-    return pre.then(function (ok) {
-      if (ok !== "go") { addLog(fileName, "ads", 0, 0, parsed.length, "dibatalkan (risiko dobel hitung)"); return false; }
-      return importAdsInner(parsed, fileName);
+      }
+      return pre.then(function (ok) {
+        if (ok !== "go") { addLog(fileName, "ads", 0, 0, parsed.length, "dibatalkan (risiko dobel hitung)"); return false; }
+        return importAdsInner(parsed, fileName);
+      });
     });
   }
 
@@ -1740,7 +1766,11 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       var gk = (a.account || "") + "|" + a.ad;
       var b = (byAd[gk] = byAd[gk] || { account: a.account || "", ad: a.ad, spend: 0, impr: 0, results: 0, days: {}, adsets: {} });
       b.spend += a.spent; b.impr += a.impressions || 0; b.results += a.results || 0;
-      if (a.spent > 0) b.days[k] = 1;
+      if (a.spent > 0) {
+        b.days[k] = 1;
+        if (!b.first || a.date < b.first) b.first = a.date;
+        if (!b.last || a.date > b.last) b.last = a.date;
+      }
       if (a.adset) b.adsets[a.adset] = 1;
     });
     var spendIncl = spendNet * (1 + PPN);
@@ -1803,6 +1833,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         impr: b.impr, cpm: b.impr > 0 ? b.spend / b.impr * 1000 : null,
         results: b.results, cpr: b.results > 0 ? b.spend / b.results : null,
         share: spendNet > 0 ? b.spend / spendNet : null,
+        first: b.first || null, last: b.last || null,
         days: Object.keys(b.days).length, adsets: Object.keys(b.adsets).length };
     }).filter(function (a) { return a.spend > 0 || a.impr > 0; });
 
@@ -1825,6 +1856,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       { key: "results", label: "Hasil", num: 1 },
       { key: "cpr", label: "Biaya/hasil", num: 1 },
       { key: "share", label: "% Spend", num: 1 },
+      { key: "first", label: "Periode aktif" },
       { key: "days", label: "Hari aktif", num: 1 }
     ];
     var t = document.getElementById("adsTable");
@@ -1842,6 +1874,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         "<td class='num'>" + (a.results ? fmtID.format(a.results) : "–") + "</td>" +
         "<td class='num'>" + (a.cpr !== null ? rp(a.cpr) : "–") + "</td>" +
         "<td class='num'>" + (a.share !== null ? pct(a.share) : "–") + "</td>" +
+        "<td style='white-space:nowrap'>" + (a.first ? (a.first === a.last ? fmtDate(new Date(a.first)) : fmtDate(new Date(a.first)) + " – " + fmtDate(new Date(a.last))) : "–") + "</td>" +
         "<td class='num'>" + a.days + "</td></tr>";
     });
     t.innerHTML = html + "</tbody>";
