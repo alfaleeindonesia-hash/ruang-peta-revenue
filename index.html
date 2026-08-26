@@ -883,7 +883,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   }
 
   function accountFromFileName(fileName) {
-    var m = String(fileName || "").match(/^(.*?)[-_ ]Ads[-_ ]/i);
+    var m = String(fileName || "").match(/^(.*?)[-_ ](?:Ads|Campaigns)[-_ ]/i);
     return m ? m[1].replace(/[-_]+/g, " ").trim() : "";
   }
 
@@ -896,6 +896,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     function num(r, col) { var v = parseFloat(g(r, col)); return isNaN(v) ? 0 : v; }
     if (!("Amount spent (IDR)" in idx) && !("Amount spent" in idx)) throw new Error("Kolom “Amount spent” tidak ditemukan di file iklan ini.");
     var spentCol = ("Amount spent (IDR)" in idx) ? "Amount spent (IDR)" : "Amount spent";
+    var level = ("Ad name" in idx) ? "ad" : (("Campaign name" in idx) ? "campaign" : "ad");
 
     var out = [], nonDaily = 0, byKey = {};
     for (var r = 1; r < rows.length; r++) {
@@ -907,9 +908,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       if (start !== end) { nonDaily++; continue; }
       var rec = {
         date: d.getTime(),
-        ad: g(row, "Ad name") || "(tanpa nama)",
+        ad: g(row, "Ad name") || g(row, "Campaign name") || "(tanpa nama)",
         adset: g(row, "Ad set name") || "",
         account: account,
+        level: level,
         spent: num(row, spentCol),
         impressions: num(row, "Impressions"),
         results: num(row, "Results")
@@ -923,7 +925,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       if (nonDaily > 0) throw new Error("File ini rekap rentang tanggal, bukan harian. Export ulang dari Meta Ads dengan breakdown per hari (file “…(time-daily)”).");
       throw new Error("Tidak ada baris iklan yang bisa dibaca dari file ini.");
     }
-    return { rows: out, nonDaily: nonDaily };
+    return { rows: out, nonDaily: nonDaily, level: level };
   }
 
   function adKey(a) { return a.date + "|" + a.ad + "|" + a.adset + "|" + (a.account || ""); }
@@ -999,6 +1001,30 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
 
   function importAds(parsedObj, fileName) {
     var parsed = parsedObj.rows;
+    var level = parsedObj.level || "ad";
+    var accs = {};
+    parsed.forEach(function (a) { accs[a.account || ""] = 1; });
+    var mixed = Object.keys(accs).filter(function (acc) {
+      return Object.keys(store.ads).some(function (k) {
+        var e = store.ads[k];
+        return (e.account || "") === acc && (e.level || "ad") !== level;
+      });
+    });
+    var pre = Promise.resolve("go");
+    if (mixed.length) {
+      pre = modal("⚠ Risiko dobel hitung",
+        "<p>File ini level <b>" + (level === "campaign" ? "Kampanye" : "Iklan") + "</b>, sedangkan akun <b>" + esc(mixed.join(", ")) +
+        "</b> sudah punya data level <b>" + (level === "campaign" ? "Iklan" : "Kampanye") + "</b> di dashboard.</p>" +
+        "<p>Kalau periodenya tumpang tindih, spend yang sama akan terhitung <b>dua kali</b> (file Kampanye adalah rekap dari iklan-iklan yang sama). Sebaiknya pakai satu level saja per akun — hapus dulu data lamanya, atau batalkan upload ini.</p>",
+        [{ label: "Saya paham, tetap upload", value: "go" }, { label: "Batal — jangan upload file ini", value: null, primary: true }]);
+    }
+    return pre.then(function (ok) {
+      if (ok !== "go") { addLog(fileName, "ads", 0, 0, parsed.length, "dibatalkan (risiko dobel hitung)"); return false; }
+      return importAdsInner(parsed, fileName);
+    });
+  }
+
+  function importAdsInner(parsed, fileName) {
     var fresh = [], changed = [], same = [];
     parsed.forEach(function (a) {
       var ex = store.ads[adKey(a)];
