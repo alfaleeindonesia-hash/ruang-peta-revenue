@@ -531,6 +531,7 @@
       <h3 data-ic="🧾">Detail order</h3>
       <p class="c-sub">Order dalam periode terpilih (berdasarkan tanggal order masuk)</p>
       <div class="search-row">
+        <button class="ghost danger" id="btnDelOrders" hidden>Hapus terpilih (0)</button>
         <select class="field-sel" id="searchField" aria-label="Kolom pencarian">
           <option value="all">Cari di: semua kolom</option>
           <option value="name">Nama</option>
@@ -559,6 +560,10 @@
         </div>
       </div>
       <div class="tbl-scroll" id="logScroll"><table id="logTable"></table></div>
+      <div class="search-row" style="margin-top:10px">
+        <button class="ghost danger" id="btnDelBatch" hidden>Hapus data upload terpilih</button>
+        <span class="muted-note" id="logDelNote" style="margin-top:0"></span>
+      </div>
     </div>
     </div><!-- /pageSummary -->
 
@@ -948,8 +953,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   }
 
   /* ---------------- import flows ---------------- */
-  function addLog(file, kind, added, updated, skipped, action) {
-    store.log.push({ ts: Date.now(), file: file, kind: kind, added: added, updated: updated, skipped: skipped, action: action });
+  function newBid() { return Date.now() + "-" + Math.floor(Math.random() * 1e6); }
+  function addLog(file, kind, added, updated, skipped, action, bid) {
+    store.log.push({ id: bid || null, ts: Date.now(), file: file, kind: kind, added: added, updated: updated, skipped: skipped, action: action });
   }
 
   function importOrders(parsed, fileName) {
@@ -961,11 +967,12 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       else same.push(o);
     });
     function apply(withUpdates) {
-      fresh.forEach(function (o) { store.orders[o.id] = o; });
-      if (withUpdates) changed.forEach(function (o) { store.orders[o.id] = o; });
+      var bid = newBid();
+      fresh.forEach(function (o) { o.b = bid; store.orders[o.id] = o; });
+      if (withUpdates) changed.forEach(function (o) { o.b = bid; store.orders[o.id] = o; });
       addLog(fileName, "order", fresh.length, withUpdates ? changed.length : 0,
         same.length + (withUpdates ? 0 : changed.length),
-        withUpdates && changed.length ? "tambah + perbarui status" : "tambah baru");
+        withUpdates && changed.length ? "tambah + perbarui status" : "tambah baru", bid);
       return true;
     }
     var dupes = changed.length + same.length;
@@ -1007,8 +1014,10 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       else if (ex.spent !== a.spent || ex.impressions !== a.impressions) changed.push(a);
       else same.push(a);
     });
+    var bid = newBid();
     function put(a) {
       if (a._legacyKey) { delete store.ads[a._legacyKey]; delete a._legacyKey; }
+      a.b = bid;
       store.ads[adKey(a)] = a;
     }
     function apply(withUpdates) {
@@ -1017,7 +1026,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       if (withUpdates) changed.forEach(put);
       addLog(fileName, "ads", fresh.length, withUpdates ? changed.length : 0,
         same.length + (withUpdates ? 0 : changed.length),
-        withUpdates && changed.length ? "tambah + perbarui angka" : "tambah baru");
+        withUpdates && changed.length ? "tambah + perbarui angka" : "tambah baru", bid);
       return true;
     }
     var dupes = changed.length + same.length;
@@ -1050,8 +1059,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       if (bucket[costKey(c)]) same.push(c); else fresh.push(c);
     });
     function apply() {
-      fresh.forEach(function (c) { bucket[costKey(c)] = c; });
-      addLog(fileName, kind, fresh.length, 0, same.length, "tambah baru");
+      var bid = newBid();
+      fresh.forEach(function (c) { c.b = bid; bucket[costKey(c)] = c; });
+      addLog(fileName, kind, fresh.length, 0, same.length, "tambah baru", bid);
       return true;
     }
     if (!same.length) return Promise.resolve(apply());
@@ -1138,8 +1148,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       var old = localStorage.getItem("ruangpeta_csv");
       if (!old) return;
       var parsed = parseOrders(parseCSV(old));
-      parsed.forEach(function (o) { store.orders[o.id] = o; });
-      addLog(localStorage.getItem("ruangpeta_csv_name") || "upload sebelumnya", "order", parsed.length, 0, 0, "migrasi dari versi lama");
+      var bid = newBid();
+      parsed.forEach(function (o) { o.b = bid; store.orders[o.id] = o; });
+      addLog(localStorage.getItem("ruangpeta_csv_name") || "upload sebelumnya", "order", parsed.length, 0, 0, "migrasi dari versi lama", bid);
       saveStore();
       localStorage.removeItem("ruangpeta_csv");
       localStorage.removeItem("ruangpeta_csv_name");
@@ -1549,8 +1560,9 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       return c * state.sortDir;
     });
 
+    var can = canUpload();
     var t = document.getElementById("orderTable");
-    var head = "<thead><tr>" + COLS.map(function (c) {
+    var head = "<thead><tr>" + (can ? "<th style='width:26px'><input type='checkbox' id='selAllOrders' aria-label='Pilih semua'></th>" : "") + COLS.map(function (c) {
       var ind = state.sortKey === c.key ? '<span class="sort-ind">' + (state.sortDir > 0 ? "▲" : "▼") + "</span>" : '<span class="sort-ind" style="opacity:.35">⇅</span>';
       return "<th class='sortable" + (c.num ? " num" : "") + "' data-key='" + c.key + "'>" + c.label + ind + "</th>";
     }).join("") + "</tr></thead>";
@@ -1560,7 +1572,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       var pill = o.isCanceled ? '<span class="pill pill-bad">Batal</span>'
         : o.isPaid ? '<span class="pill pill-good">Paid ✓</span>'
         : '<span class="pill pill-warn">Pending</span>';
-      body += "<tr><td>" + fmtDate(o.draft) + " " + String(o.draft.getHours()).padStart(2, "0") + ":" + String(o.draft.getMinutes()).padStart(2, "0") + "</td>" +
+      body += "<tr>" + (can ? "<td><input type='checkbox' class='ord-sel' data-oid='" + esc(o.id) + "'></td>" : "") +
+        "<td>" + fmtDate(o.draft) + " " + String(o.draft.getHours()).padStart(2, "0") + ":" + String(o.draft.getMinutes()).padStart(2, "0") + "</td>" +
         "<td>" + esc(o.id) + "</td><td>" + esc(o.name) + "<br><span style='color:var(--muted);font-size:12px'>" + esc(o.phone) + "</span></td>" +
         "<td>" + esc(o.variant) + "</td><td>" + pill + "</td><td>" + esc(o.method) + "</td>" +
         "<td class='num'>" + rp(o.gross) + "</td></tr>";
@@ -1574,24 +1587,58 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
 
     document.getElementById("tableNote").textContent = list.length + " order" +
       (list.length > VISIBLE_ROWS ? " — scroll di dalam kotak untuk melihat semuanya, klik judul kolom untuk mengurutkan." : ".");
+    updateDelOrdersBtn();
+  }
+
+  function updateDelOrdersBtn() {
+    var n = document.querySelectorAll(".ord-sel:checked").length;
+    var b = document.getElementById("btnDelOrders");
+    b.hidden = n === 0;
+    b.textContent = "Hapus terpilih (" + n + ")";
   }
 
   /* ---------------- upload log ---------------- */
+  function batchCounts(bid) {
+    var c = { orders: 0, ads: 0, costs: 0, revs: 0, total: 0 };
+    ["orders", "ads", "costs", "revs"].forEach(function (b) {
+      Object.keys(store[b]).forEach(function (k) { if (store[b][k].b === bid) { c[b]++; c.total++; } });
+    });
+    return c;
+  }
+
   function renderLog() {
     var t = document.getElementById("logTable");
-    if (!store.log.length) { t.innerHTML = "<tbody><tr><td class='muted-note'>Belum ada upload.</td></tr></tbody>"; return; }
-    var html = "<thead><tr><th>Waktu</th><th>File</th><th>Jenis</th><th class='num'>Baru</th><th class='num'>Diperbarui</th><th class='num'>Dilewati</th><th>Aksi</th></tr></thead><tbody>";
+    var can = canUpload();
+    if (!store.log.length) {
+      t.innerHTML = "<tbody><tr><td class='muted-note'>Belum ada upload.</td></tr></tbody>";
+      document.getElementById("btnDelBatch").hidden = true;
+      document.getElementById("logDelNote").textContent = "";
+      return;
+    }
+    var html = "<thead><tr>" + (can ? "<th></th>" : "") + "<th>Waktu</th><th>File</th><th>Jenis</th><th class='num'>Baru</th><th class='num'>Diperbarui</th><th class='num'>Dilewati</th><th>Aksi</th></tr></thead><tbody>";
+    var anySelectable = false, anyLegacy = false;
     store.log.slice().reverse().forEach(function (l) {
       var kind = l.kind === "order" ? '<span class="pill pill-info">Order Scalev</span>'
         : l.kind === "cost" ? '<span class="pill pill-info">Biaya manual</span>'
         : l.kind === "rev" ? '<span class="pill pill-info">Revenue manual</span>'
         : l.kind === "backup" ? '<span class="pill pill-info">Cadangan</span>'
+        : l.kind === "del" ? '<span class="pill pill-bad">Penghapusan</span>'
         : '<span class="pill pill-info">Biaya iklan</span>';
-      html += "<tr><td>" + fmtDateTime(new Date(l.ts)) + "</td><td>" + esc(l.file) + "</td><td>" + kind + "</td>" +
+      var selCell = "";
+      if (can) {
+        var selectable = l.id && l.kind !== "del" && batchCounts(l.id).total > 0;
+        if (selectable) { anySelectable = true; selCell = "<td><input type='checkbox' class='log-sel' data-bid='" + esc(l.id) + "'></td>"; }
+        else { if (l.id == null && l.kind !== "del") anyLegacy = true; selCell = "<td></td>"; }
+      }
+      html += "<tr>" + selCell + "<td>" + fmtDateTime(new Date(l.ts)) + "</td><td>" + esc(l.file) + "</td><td>" + kind + "</td>" +
         "<td class='num'>" + l.added + "</td><td class='num'>" + l.updated + "</td><td class='num'>" + l.skipped + "</td>" +
         "<td>" + esc(l.action) + "</td></tr>";
     });
     t.innerHTML = html + "</tbody>";
+    document.getElementById("btnDelBatch").hidden = true;
+    document.getElementById("logDelNote").textContent = !can ? "" :
+      (anySelectable ? "Centang upload yang datanya mau dihapus." : "") +
+      (anyLegacy ? " Upload lama (tanpa penanda) tidak bisa dihapus per-file — hapus per baris lewat centang di Detail order." : "");
     var wrap = document.getElementById("logScroll");
     wrap.style.maxHeight = "";
     var trs = t.tBodies[0] ? t.tBodies[0].rows : [];
@@ -1630,7 +1677,7 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
   }
 
   function render() {
-    if (!orders.length && !adsRows.length) return;
+    if (!orders.length && !adsRows.length && !costRows.length && !revRows.length) return;
     var range = currentRange();
     var sum = summarize(range);
     renderKPIs(sum, range);
@@ -1954,6 +2001,63 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     renderAdsPage(currentRange());
   });
 
+  /* ---- hapus terpilih: Detail order ---- */
+  document.getElementById("orderTable").addEventListener("change", function (e) {
+    if (e.target.id === "selAllOrders") {
+      document.querySelectorAll(".ord-sel").forEach(function (c) { c.checked = e.target.checked; });
+    }
+    updateDelOrdersBtn();
+  });
+  document.getElementById("btnDelOrders").addEventListener("click", function () {
+    if (!canUpload()) return;
+    var ids = [].map.call(document.querySelectorAll(".ord-sel:checked"), function (c) { return c.dataset.oid; });
+    if (!ids.length) return;
+    modal("Hapus " + ids.length + " order?",
+      "<p>" + ids.length + " order terpilih akan dihapus permanen dari dashboard (dan dari cloud, jika mode cloud). Angka revenue akan ikut berubah.</p>",
+      [{ label: "Ya, hapus " + ids.length + " order", value: "yes" }, { label: "Batal", value: null, primary: true }]
+    ).then(function (c) {
+      if (c !== "yes") return;
+      ids.forEach(function (id) { delete store.orders[id]; });
+      addLog("Detail order", "del", 0, 0, 0, "hapus " + ids.length + " order terpilih");
+      saveStore();
+      rebuild(); refreshShell(); renderReportOptions(); render();
+    });
+  });
+
+  /* ---- hapus terpilih: Riwayat upload (per batch) ---- */
+  document.getElementById("logTable").addEventListener("change", function () {
+    var n = document.querySelectorAll(".log-sel:checked").length;
+    var b = document.getElementById("btnDelBatch");
+    b.hidden = n === 0;
+    b.textContent = "Hapus data dari " + n + " upload terpilih";
+  });
+  document.getElementById("btnDelBatch").addEventListener("click", function () {
+    if (!canUpload()) return;
+    var bids = [].map.call(document.querySelectorAll(".log-sel:checked"), function (c) { return c.dataset.bid; });
+    if (!bids.length) return;
+    var tot = { orders: 0, ads: 0, costs: 0, revs: 0, total: 0 };
+    bids.forEach(function (bid) {
+      var c = batchCounts(bid);
+      ["orders", "ads", "costs", "revs", "total"].forEach(function (k) { tot[k] += c[k]; });
+    });
+    modal("Hapus data dari " + bids.length + " upload?",
+      "<p>Yang akan dihapus permanen:</p><ul><li>" + tot.orders + " order</li><li>" + tot.ads + " baris iklan</li><li>" +
+      tot.costs + " biaya manual</li><li>" + tot.revs + " revenue manual</li></ul><p>Data dari upload lain tidak tersentuh.</p>",
+      [{ label: "Ya, hapus " + tot.total + " data", value: "yes" }, { label: "Batal", value: null, primary: true }]
+    ).then(function (c) {
+      if (c !== "yes") return;
+      var bidSet = {};
+      bids.forEach(function (b2) { bidSet[b2] = 1; });
+      ["orders", "ads", "costs", "revs"].forEach(function (bk) {
+        Object.keys(store[bk]).forEach(function (k) { if (store[bk][k].b && bidSet[store[bk][k].b]) delete store[bk][k]; });
+      });
+      addLog(bids.length + " upload terpilih", "del", 0, 0, 0,
+        "hapus " + tot.orders + " order · " + tot.ads + " iklan · " + tot.costs + " biaya · " + tot.revs + " revenue");
+      saveStore();
+      rebuild(); refreshShell(); renderReportOptions(); render();
+    });
+  });
+
   document.getElementById("orderTable").addEventListener("click", function (e) {
     var th = e.target.closest("th.sortable");
     if (!th) return;
@@ -2010,12 +2114,13 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         : [{ label: "Gabungkan " + totalNew + " data baru", value: "go", primary: true }, { label: "Batal", value: null }]
     ).then(function (c) {
       if (c !== "go") return false;
+      var bid = newBid();
       buckets.forEach(function (b) {
         var src = data[b] || {};
-        Object.keys(src).forEach(function (k) { if (!store[b][k]) store[b][k] = src[k]; });
+        Object.keys(src).forEach(function (k) { if (!store[b][k]) { src[k].b = bid; store[b][k] = src[k]; } });
       });
       addLog(sourceLabel, "backup", totalNew, 0, 0,
-        counts.orders + " order · " + counts.ads + " iklan · " + counts.costs + " biaya · " + counts.revs + " revenue");
+        counts.orders + " order · " + counts.ads + " iklan · " + counts.costs + " biaya · " + counts.revs + " revenue", bid);
       maskStore();
       saveStore();
       rebuild(); refreshShell(); renderReportOptions(); render();
