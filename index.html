@@ -146,12 +146,17 @@
   .wrap { max-width: 1080px; margin: 0 auto; padding: 28px 20px 64px; }
 
   /* ---------- header ---------- */
-  .topbar { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
-  .brand h1 { font-family: "Sora", "Figtree", system-ui, sans-serif; font-weight: 700; font-size: 22px; margin: 0; letter-spacing: -0.01em; }
-  .brand .sub { color: var(--ink-2); font-size: 13px; margin-top: 2px; }
-  .upload-side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .file-meta { font-size: 12.5px; color: var(--muted); text-align: right; line-height: 1.4; }
-  .file-meta strong { color: var(--ink-2); font-weight: 600; }
+  .topbar { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 12px; margin-bottom: 18px; padding-top: 6px; }
+  .brand h1 {
+    font-family: "Sora", "Figtree", system-ui, sans-serif; font-weight: 700; font-size: 30px;
+    margin: 0; letter-spacing: -0.01em;
+    color: var(--acc-blue);
+    background: linear-gradient(92deg, var(--acc-blue), var(--acc-aqua));
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .brand .sub { color: var(--ink-2); font-size: 13px; margin-top: 4px; }
+  .upload-side { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
   .btn {
     display: inline-flex; align-items: center; gap: 8px;
     background: var(--accent); color: #fff; border: none; cursor: pointer;
@@ -190,11 +195,6 @@
   .chip.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
 
   /* ---------- palet lembut per section ---------- */
-  .brand h1::before {
-    content: ""; display: inline-block; width: 13px; height: 13px; border-radius: 4px;
-    background: linear-gradient(135deg, var(--acc-blue), var(--acc-aqua));
-    margin-right: 9px;
-  }
   .kpi.k-blue   { background: var(--tint-blue); }   .kpi.k-blue .k-label   { color: var(--lab-blue); }
   .kpi.k-orange { background: var(--tint-orange); } .kpi.k-orange .k-label { color: var(--lab-orange); }
   .kpi.k-green  { background: var(--tint-green); }  .kpi.k-green .k-label  { color: var(--lab-green); }
@@ -241,13 +241,12 @@
   .acct .who { background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; font-weight: 600; white-space: nowrap; }
   .mode-banner { background: var(--warn-bg); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--ink-2); margin-bottom: 10px; }
 
-  /* ---------- sticky header & back-to-top ---------- */
-  .sticky-head { position: sticky; top: 0; z-index: 45; background: var(--page); padding-top: 8px; margin-top: -8px; }
-  .sticky-head.stuck { border-bottom: 1px solid var(--grid); box-shadow: 0 6px 16px rgba(0,0,0,.07); }
+  /* ---------- header (non-sticky) & back-to-top ---------- */
+  .sticky-head { background: var(--page); }
   .sticky-head .tabs { margin-bottom: 0; border-bottom: none; }
   #app { padding-top: 16px; border-top: 1px solid var(--grid); }
   .totop {
-    position: fixed; right: 22px; bottom: 22px; z-index: 55;
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: 22px; z-index: 55;
     width: 44px; height: 44px; border-radius: 50%; border: none;
     background: var(--accent); color: #fff; font-size: 20px; line-height: 1; cursor: pointer;
     box-shadow: 0 4px 14px rgba(0,0,0,.25);
@@ -418,11 +417,10 @@
   <div class="sticky-head" id="stickyHead">
   <div class="topbar">
     <div class="brand">
-      <h1>Ruang Peta Revenue</h1>
-      <div class="sub">Laporan mingguan revenue vs biaya iklan · Scalev + Meta Ads · <b>v9</b></div>
+      <h1>Ruang PETA Dashboard</h1>
+      <div class="sub">Laporan mingguan revenue vs biaya · Scalev + Meta Ads · <b>v10.3</b></div>
     </div>
     <div class="upload-side">
-      <div class="file-meta" id="fileMeta" hidden></div>
       <div class="acct" id="acctBox" hidden>
         <span class="who" id="acctName"></span>
         <button class="ghost" id="btnLogout">Keluar</button>
@@ -457,7 +455,7 @@
 
   <div class="gate" id="gate" hidden>
     <div class="gate-card">
-      <h2>📈 Ruang Peta Revenue</h2>
+      <h2>📈 Ruang PETA Dashboard</h2>
       <p id="gateMsg">Masuk untuk melihat dashboard.</p>
       <div class="gate-actions" id="gateActions" hidden>
         <button class="btn" id="btnGoogle">Masuk dengan Google</button>
@@ -1719,13 +1717,6 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
       acct.hidden = false;
       document.getElementById("acctName").textContent = cloudUser.isAnonymous ? "👁 Tamu (hanya lihat)" : cloudUser.email;
     } else acct.hidden = true;
-    var meta = document.getElementById("fileMeta");
-    if (hasData) {
-      meta.hidden = false;
-      var last = store.log[store.log.length - 1];
-      meta.innerHTML = "<strong>" + fmtID.format(orders.length) + " order · " + fmtID.format(adsRows.length) + " baris iklan · " + fmtID.format(costRows.length) + " biaya · " + fmtID.format(revRows.length) + " revenue manual</strong><br>" +
-        (last ? "terakhir: " + esc(last.file) + " (" + fmtDateTime(new Date(last.ts)) + ")" : "");
-    } else meta.hidden = true;
   }
 
   function render() {
@@ -2234,10 +2225,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
 
   var toTop = document.getElementById("toTop");
   toTop.addEventListener("click", function () { window.scrollTo({ top: 0, behavior: "smooth" }); });
-  var stickyHead = document.getElementById("stickyHead");
   window.addEventListener("scroll", function () {
     toTop.hidden = window.scrollY < 400;
-    stickyHead.classList.toggle("stuck", window.scrollY > 10);
   }, { passive: true });
 
   var resizeTimer;
