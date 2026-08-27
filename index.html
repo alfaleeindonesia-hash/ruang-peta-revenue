@@ -418,7 +418,7 @@
   <div class="topbar">
     <div class="brand">
       <h1>Ruang PETA Dashboard</h1>
-      <div class="sub">Laporan mingguan revenue vs biaya · Scalev + Meta Ads · <b>v10.4</b></div>
+      <div class="sub">Laporan mingguan revenue vs biaya · Scalev + Meta Ads · <b>v10.5</b></div>
     </div>
     <div class="upload-side">
       <div class="acct" id="acctBox" hidden>
@@ -507,7 +507,7 @@
 
     <div class="card card-green">
       <h3 data-ic="🗓️">Rekap untung / rugi per minggu</h3>
-      <p class="c-sub">Minggu berjalan Sabtu–Jumat · biaya iklan = angka Meta + PPN 11% (upload = sebelum PPN) · biaya lain = input manual, tanpa markup PPN · profit = net revenue − (biaya iklan incl. PPN + biaya lain) · ROAS = revenue paid ÷ biaya iklan incl. PPN</p>
+      <p class="c-sub">Minggu berjalan Sabtu–Jumat · net revenue = gross − biaya transaksi · biaya transaksi = payment fee (QRIS/e-wallet/VA) + fee Scalev, sudah terpotong di net revenue · biaya iklan = angka Meta + PPN 11% · net profit = net revenue (+ revenue lain) − biaya iklan − biaya lain · ROAS = gross revenue ÷ biaya iklan incl. PPN</p>
       <div class="tbl-scroll" id="weeklyScroll"><table id="weeklyTable"></table></div>
     </div>
 
@@ -1476,16 +1476,17 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
     var rows = weeklyRows();
     var t = document.getElementById("weeklyTable");
     var showRevM = revRows.length > 0;
-    var html = "<thead><tr><th>Minggu</th><th class='num'>Order<br>Masuk</th><th class='num'>Order<br>Paid</th><th class='num'>Revenue<br>paid</th>" +
+    var html = "<thead><tr><th>Minggu</th><th class='num'>Order<br>Masuk</th><th class='num'>Order<br>Paid</th><th class='num'>Net<br>Revenue</th><th class='num'>Biaya<br>Transaksi</th>" +
       (showRevM ? "<th class='num'>Revenue<br>lain</th>" : "") +
       "<th class='num'>Biaya iklan<br>(incl. PPN)</th><th class='num'>Biaya<br>lain</th><th class='num'>Profit / Rugi</th><th class='num'>ROAS</th><th class='num'>Rev WoW</th></tr></thead><tbody>";
     rows.forEach(function (w, i) {
+      var fee = w.d.rev - w.d.net; // payment fee (QRIS/e-wallet/VA) + fee Scalev
       var profit = w.d.net + w.d.revManual - w.d.spend;
       var roas = w.d.spendAds > 0 ? w.d.rev / w.d.spendAds : null;
-      var prev = i > 0 ? rows[i - 1].d.rev : 0;
+      var prev = i > 0 ? rows[i - 1].d.net : 0;
       var wow = "–";
       if (i > 0 && prev > 0) {
-        var dd = (w.d.rev - prev) / prev;
+        var dd = (w.d.net - prev) / prev;
         wow = '<span class="' + (dd >= 0 ? "delta-up" : "delta-down") + '">' + (dd >= 0 ? "▲" : "▼") + " " + pct(Math.abs(dd)) + "</span>";
       }
       var wkLbl = sameMonth(w.start, w.end)
@@ -1493,7 +1494,8 @@ window.OWNER_EMAIL = "alfaleeindonesia@gmail.com"; // satu-satunya akun yang bol
         : fmtDate(w.start) + " –<br>" + fmtDateY(w.end);
       html += "<tr><td class='wk'>" + wkLbl + "</td>" +
         "<td class='num'>" + w.d.orders + "</td><td class='num'>" + w.d.paid + "</td>" +
-        "<td class='num'>" + rp(w.d.rev) + "</td>" +
+        "<td class='num'>" + rp(w.d.net) + "</td>" +
+        "<td class='num'>" + (fee > 0 ? rp(fee) : "–") + "</td>" +
         (showRevM ? "<td class='num'>" + (w.d.revManual > 0 ? rp(w.d.revManual) : "–") + "</td>" : "") +
         "<td class='num'>" + (w.d.spendAds > 0 ? rp(w.d.spendAds) : "–") + "</td>" +
         "<td class='num'>" + (w.d.spendManual > 0 ? rp(w.d.spendManual) : "–") + "</td>" +
